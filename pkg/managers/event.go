@@ -17,6 +17,8 @@ type EventManager struct {
 	cancel   context.CancelFunc
 	mu       sync.RWMutex
 	wg       sync.WaitGroup
+	closed   bool
+	closedMu sync.Mutex
 }
 
 // NewEventManager creates a new event manager
@@ -114,6 +116,14 @@ func (em *EventManager) dispatch(event types.Event) {
 
 // Close gracefully shuts down the event manager
 func (em *EventManager) Close() error {
+	em.closedMu.Lock()
+	if em.closed {
+		em.closedMu.Unlock()
+		return nil
+	}
+	em.closed = true
+	em.closedMu.Unlock()
+
 	em.cancel()
 	em.wg.Wait()
 	close(em.events)
