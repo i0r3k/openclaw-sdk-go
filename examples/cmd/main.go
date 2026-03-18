@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	openclaw "github.com/i0r3k/openclaw-sdk-go/pkg/openclaw"
+	openclaw "github.com/i0r3k/openclaw-sdk-go/pkg"
 	"github.com/i0r3k/openclaw-sdk-go/pkg/protocol"
 )
 
