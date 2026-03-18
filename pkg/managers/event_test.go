@@ -46,7 +46,7 @@ func TestEventManager_Subscribe(t *testing.T) {
 		// Handler was called
 	}
 
-	em.Close()
+	_ = em.Close()
 }
 
 func TestEventManager_Unsubscribe(t *testing.T) {
@@ -61,5 +61,5 @@ func TestEventManager_Unsubscribe(t *testing.T) {
 	em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()})
 	time.Sleep(20 * time.Millisecond)
 
-	em.Close()
+	_ = em.Close()
 }

@@ -35,7 +35,6 @@ type ConnectionManager struct {
 	transport transport.Transport
 	eventMgr  *EventManager
 	ctx       context.Context
-	wg        sync.WaitGroup
 	mu        sync.Mutex
 }
 
@@ -61,7 +60,7 @@ func (cm *ConnectionManager) Connect(ctx context.Context) error {
 
 	t, err := transport.Dial(cm.config.URL, header, nil)
 	if err != nil {
-		cm.state.Transition(types.StateFailed, err)
+		_ = cm.state.Transition(types.StateFailed, err)
 		return err
 	}
 
@@ -93,7 +92,7 @@ func (cm *ConnectionManager) Disconnect() error {
 
 	err := cm.transport.Close()
 	cm.transport = nil
-	cm.state.Transition(types.StateDisconnected, nil)
+	_ = cm.state.Transition(types.StateDisconnected, nil)
 
 	if cm.eventMgr != nil {
 		cm.eventMgr.Emit(types.Event{

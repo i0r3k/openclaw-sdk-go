@@ -41,7 +41,11 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Printf("⚠️  Upgrade error from %s: %v", r.RemoteAddr, err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("⚠️  Close error from %s: %v", r.RemoteAddr, err)
+		}
+	}()
 
 	log.Printf("✓ Client connected from %s", r.RemoteAddr)
 

@@ -20,7 +20,6 @@ type ConnectionStateMachine struct {
 	state  types.ConnectionState
 	mu     sync.RWMutex
 	events chan StateChangeEvent
-	ctx    interface{} // context.Context - added for future cancellation support
 }
 
 // NewConnectionStateMachine creates a new state machine

@@ -18,7 +18,7 @@ func TestConnectionManager_State(t *testing.T) {
 		t.Errorf("expected disconnected, got %s", state)
 	}
 
-	em.Close()
+	_ = em.Close()
 }
 
 func TestConnectionManager_DisconnectWhenNotConnected(t *testing.T) {
@@ -33,7 +33,7 @@ func TestConnectionManager_DisconnectWhenNotConnected(t *testing.T) {
 		t.Errorf("expected no error, got %v", err)
 	}
 
-	em.Close()
+	_ = em.Close()
 }
 
 func TestConnectionManager_TransportWhenNotConnected(t *testing.T) {
@@ -47,5 +47,5 @@ func TestConnectionManager_TransportWhenNotConnected(t *testing.T) {
 		t.Error("expected nil transport when not connected")
 	}
 
-	em.Close()
+	_ = em.Close()
 }

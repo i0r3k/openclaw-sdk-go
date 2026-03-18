@@ -17,7 +17,9 @@ func TestNewClient(t *testing.T) {
 	if client == nil {
 		t.Fatal("expected client to not be nil")
 	}
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 
 	if client.State() != StateDisconnected {
 		t.Errorf("expected disconnected state, got %s", client.State())
@@ -46,7 +48,9 @@ func TestClientOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 }
 
 func TestClientEvents(t *testing.T) {
@@ -54,7 +58,9 @@ func TestClientEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 
 	events := client.Events()
 	if events == nil {
@@ -78,7 +84,9 @@ func TestClientConnectWithoutURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 
 	ctx := context.Background()
 	err = client.Connect(ctx)
@@ -92,7 +100,9 @@ func TestClientState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 
 	state := client.State()
 	if state != StateDisconnected {

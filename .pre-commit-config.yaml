@@ -22,6 +22,16 @@ repos:
         args: [vet, ./...]
         pass_filenames: false
 
+  # golangci-lint - fast Go linters runner
+  - repo: local
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        entry: golangci-lint
+        language: system
+        args: [run, --fix, --timeout=5m]
+        pass_filenames: false
+
   # Go test - run tests
   - repo: local
     hooks:

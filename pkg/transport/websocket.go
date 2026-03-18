@@ -161,7 +161,7 @@ func (t *WebSocketTransport) readLoop() {
 			return
 		default:
 			// Set read deadline to prevent blocking forever
-			t.conn.SetReadDeadline(time.Now().Add(t.readTimeout))
+			_ = t.conn.SetReadDeadline(time.Now().Add(t.readTimeout))
 
 			_, message, err := t.conn.ReadMessage()
 			if err != nil {
@@ -186,7 +186,7 @@ func (t *WebSocketTransport) writeLoop() {
 			return
 		case message := <-t.sendCh:
 			// Set write deadline to prevent blocking forever
-			t.conn.SetWriteDeadline(time.Now().Add(t.writeTimeout))
+			_ = t.conn.SetWriteDeadline(time.Now().Add(t.writeTimeout))
 
 			if err := t.conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				t.handleError(err)
@@ -244,7 +244,7 @@ func (t *WebSocketTransport) Close() error {
 	t.wg.Wait()
 
 	// Send close frame with deadline
-	t.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	_ = t.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	err := t.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	if err != nil {
 		return t.conn.Close()

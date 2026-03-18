@@ -196,7 +196,6 @@ type OpenClawClient interface {
 // client is the concrete implementation
 type client struct {
 	config   *ClientConfig
-	state    ConnectionState
 	managers struct {
 		event      *managers.EventManager
 		request    *managers.RequestManager
@@ -331,18 +330,25 @@ func (c *client) Close() error {
 
 	c.cancel()
 
+	var closeErr error
 	if c.managers.event != nil {
-		c.managers.event.Close()
+		if err := c.managers.event.Close(); err != nil {
+			closeErr = err
+		}
 	}
 	if c.managers.request != nil {
-		c.managers.request.Close()
+		if err := c.managers.request.Close(); err != nil {
+			closeErr = err
+		}
 	}
 	if c.managers.connection != nil {
-		c.managers.connection.Close()
+		if err := c.managers.connection.Close(); err != nil {
+			closeErr = err
+		}
 	}
 	if c.managers.reconnect != nil {
 		c.managers.reconnect.Stop()
 	}
 
-	return nil
+	return closeErr
 }

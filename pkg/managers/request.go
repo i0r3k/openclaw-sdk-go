@@ -15,7 +15,6 @@ type RequestManager struct {
 	mu       sync.Mutex
 	ctx      context.Context
 	cancel   context.CancelFunc
-	wg       sync.WaitGroup
 }
 
 // NewRequestManager creates a new request manager

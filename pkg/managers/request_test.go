@@ -38,7 +38,7 @@ func TestRequestManager_SendAndReceive(t *testing.T) {
 		t.Errorf("expected 'test-123', got '%s'", got.RequestID)
 	}
 
-	rm.Close()
+	_ = rm.Close()
 }
 
 func TestRequestManager_ContextCancellation(t *testing.T) {
@@ -60,5 +60,5 @@ func TestRequestManager_ContextCancellation(t *testing.T) {
 		t.Error("expected error for cancelled context")
 	}
 
-	rm.Close()
+	_ = rm.Close()
 }

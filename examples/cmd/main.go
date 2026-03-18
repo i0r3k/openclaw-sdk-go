@@ -24,7 +24,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-	defer client.Close()
+	defer func() {
+		_ = client.Close()
+	}()
 
 	// Subscribe to connection events
 	client.Subscribe(types.EventConnect, func(e types.Event) {

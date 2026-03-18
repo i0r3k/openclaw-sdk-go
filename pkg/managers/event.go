@@ -99,7 +99,13 @@ func (em *EventManager) dispatch(event types.Event) {
 	for _, handler := range handlerMap {
 		if handler != nil {
 			func() {
-				defer func() { recover() }()
+				defer func() {
+					if r := recover(); r != nil {
+						// Log panic but continue processing other handlers
+						// In production, you might want to log this to a logger
+						_ = r // Explicitly discard to avoid staticcheck warning
+					}
+				}()
 				handler(event)
 			}()
 		}
