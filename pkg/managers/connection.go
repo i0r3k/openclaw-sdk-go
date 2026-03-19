@@ -9,6 +9,7 @@ package managers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -68,7 +69,9 @@ func (cm *ConnectionManager) Connect(ctx context.Context) error {
 
 	t, err := transport.Dial(cm.config.URL, header, nil)
 	if err != nil {
-		_ = cm.state.Transition(types.StateFailed, err)
+		if transitionErr := cm.state.Transition(types.StateFailed, err); transitionErr != nil {
+			err = errors.Join(err, transitionErr)
+		}
 		return err
 	}
 
@@ -101,7 +104,11 @@ func (cm *ConnectionManager) Disconnect() error {
 
 	err := cm.transport.Close()
 	cm.transport = nil
-	_ = cm.state.Transition(types.StateDisconnected, nil)
+	if transitionErr := cm.state.Transition(types.StateDisconnected, nil); transitionErr != nil {
+		if err == nil {
+			err = transitionErr
+		}
+	}
 
 	if cm.eventMgr != nil {
 		cm.eventMgr.Emit(types.Event{
