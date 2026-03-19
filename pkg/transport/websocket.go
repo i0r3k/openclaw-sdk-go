@@ -9,11 +9,12 @@ package transport
 
 import (
 	"context"
-	"crypto/tls"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/connection"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 	"github.com/gorilla/websocket"
 )
 
@@ -101,7 +102,20 @@ func Dial(url string, header http.Header, config *WebSocketConfig) (*WebSocketTr
 
 	// Convert TLSConfig to crypto/tls.Config if provided
 	if config != nil && config.TLSConfig != nil {
-		dialer.TLSClientConfig = config.TLSConfig.toTLSConfig()
+		// Use connection.TlsValidator to properly load certificates
+		tlsConfig := &connection.TLSConfig{
+			InsecureSkipVerify: config.TLSConfig.InsecureSkipVerify,
+			CertFile:           config.TLSConfig.CertFile,
+			KeyFile:            config.TLSConfig.KeyFile,
+			CAFile:             config.TLSConfig.CAFile,
+			ServerName:         config.TLSConfig.ServerName,
+		}
+		validator := connection.NewTlsValidator(tlsConfig)
+		tlsClientConfig, err := validator.GetTLSConfig()
+		if err != nil {
+			return nil, types.NewTransportError("failed to build TLS config", err)
+		}
+		dialer.TLSClientConfig = tlsClientConfig
 	}
 
 	conn, _, err := dialer.Dial(url, header)
@@ -280,20 +294,6 @@ func (t *WebSocketTransport) IsConnected() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.conn != nil && !t.closed
-}
-
-// toTLSConfig converts TLSConfig to crypto/tls.Config.
-// Note: For full implementation with cert loading, use connection.TlsValidator.GetTLSConfig().
-func (c *TLSConfig) toTLSConfig() *tls.Config {
-	config := &tls.Config{
-		InsecureSkipVerify: c.InsecureSkipVerify,
-		ServerName:         c.ServerName,
-	}
-
-	// Note: For full implementation, load certs from files
-	// This is handled by connection.TlsValidator.GetTLSConfig() in Phase 5
-
-	return config
 }
 
 // compile-time check: WebSocketTransport implements transport interface

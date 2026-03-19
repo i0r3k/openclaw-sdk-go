@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/connection"
 	"github.com/gorilla/websocket"
 )
 
@@ -356,7 +357,7 @@ func TestWebSocketTransport_Errors(t *testing.T) {
 	}
 }
 
-// TestTLSConfig_toTLSConfig tests TLSConfig conversion
+// TestTLSConfig_toTLSConfig tests TLSConfig conversion via connection.TlsValidator
 func TestTLSConfig_toTLSConfig(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -370,7 +371,16 @@ func TestTLSConfig_toTLSConfig(t *testing.T) {
 				ServerName:         "example.com",
 			},
 			check: func(t *testing.T, cfg *TLSConfig) {
-				tlsConfig := cfg.toTLSConfig()
+				// Convert to connection.TLSConfig and use TlsValidator
+				connConfig := &connection.TLSConfig{
+					InsecureSkipVerify: cfg.InsecureSkipVerify,
+					ServerName:         cfg.ServerName,
+				}
+				validator := connection.NewTlsValidator(connConfig)
+				tlsConfig, err := validator.GetTLSConfig()
+				if err != nil {
+					t.Fatalf("GetTLSConfig() failed: %v", err)
+				}
 				if !tlsConfig.InsecureSkipVerify {
 					t.Error("InsecureSkipVerify not set")
 				}
@@ -386,7 +396,15 @@ func TestTLSConfig_toTLSConfig(t *testing.T) {
 				ServerName:         "secure.example.com",
 			},
 			check: func(t *testing.T, cfg *TLSConfig) {
-				tlsConfig := cfg.toTLSConfig()
+				connConfig := &connection.TLSConfig{
+					InsecureSkipVerify: cfg.InsecureSkipVerify,
+					ServerName:         cfg.ServerName,
+				}
+				validator := connection.NewTlsValidator(connConfig)
+				tlsConfig, err := validator.GetTLSConfig()
+				if err != nil {
+					t.Fatalf("GetTLSConfig() failed: %v", err)
+				}
 				if tlsConfig.InsecureSkipVerify {
 					t.Error("InsecureSkipVerify should be false")
 				}
@@ -396,13 +414,15 @@ func TestTLSConfig_toTLSConfig(t *testing.T) {
 			name:   "nil config",
 			config: nil,
 			check: func(t *testing.T, cfg *TLSConfig) {
-				defer func() {
-					if r := recover(); r != nil {
-						t.Errorf("toTLSConfig() panicked: %v", r)
-					}
-				}()
-				// This would panic if called on nil, but we're testing nil handling
-				_ = cfg
+				// nil config should return empty tls.Config
+				validator := connection.NewTlsValidator(nil)
+				tlsConfig, err := validator.GetTLSConfig()
+				if err != nil {
+					t.Errorf("GetTLSConfig() with nil failed: %v", err)
+				}
+				if tlsConfig == nil {
+					t.Error("Expected non-nil tls.Config")
+				}
 			},
 		},
 	}
