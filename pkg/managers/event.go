@@ -26,16 +26,22 @@ type EventManager struct {
 	wg       sync.WaitGroup                                     // WaitGroup for goroutines
 	closed   bool                                               // Flag indicating if manager is closed
 	closedMu sync.Mutex                                         // Mutex for close flag
+	logger   types.Logger                                       // Logger for error reporting
 }
 
 // NewEventManager creates a new event manager with the specified buffer size.
 func NewEventManager(ctx context.Context, bufferSize int) *EventManager {
 	ctx, cancel := context.WithCancel(ctx)
+	logger, _ := types.FromContext(ctx)
+	if logger == nil {
+		logger = &types.NopLogger{}
+	}
 	return &EventManager{
 		events:   make(chan types.Event, bufferSize),
 		handlers: make(map[types.EventType]map[uintptr]types.EventHandler),
 		ctx:      ctx,
 		cancel:   cancel,
+		logger:   logger,
 	}
 }
 
@@ -104,7 +110,7 @@ func (em *EventManager) Start() {
 
 // dispatch sends event to all registered handlers for the event type.
 // Handlers are called in goroutines to prevent blocking.
-// Panics in handlers are recovered to continue processing other handlers.
+// Panics in handlers are recovered and logged to continue processing other handlers.
 func (em *EventManager) dispatch(event types.Event) {
 	em.mu.RLock()
 	handlerMap := em.handlers[event.Type]
@@ -116,8 +122,7 @@ func (em *EventManager) dispatch(event types.Event) {
 				defer func() {
 					if r := recover(); r != nil {
 						// Log panic but continue processing other handlers
-						// In production, you might want to log this to a logger
-						_ = r // Explicitly discard to avoid staticcheck warning
+						em.logger.Error("event handler panic recovered", "event", event.Type, "panic", r)
 					}
 				}()
 				handler(event)
