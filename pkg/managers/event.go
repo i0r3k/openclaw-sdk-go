@@ -10,7 +10,7 @@ package managers
 import (
 	"context"
 	"sync"
-	"unsafe"
+	"sync/atomic"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
@@ -18,15 +18,16 @@ import (
 // EventManager manages event subscriptions and dispatching.
 // It provides a thread-safe pub/sub system for SDK events.
 type EventManager struct {
-	events   chan types.Event                                   // Channel for incoming events
-	handlers map[types.EventType]map[uintptr]types.EventHandler // Map of event type to handlers
-	ctx      context.Context                                    // Context for lifecycle management
-	cancel   context.CancelFunc                                 // Cancel function for context
-	mu       sync.RWMutex                                       // Mutex for thread-safe handler access
-	wg       sync.WaitGroup                                     // WaitGroup for goroutines
-	closed   bool                                               // Flag indicating if manager is closed
-	closedMu sync.Mutex                                         // Mutex for close flag
-	logger   types.Logger                                       // Logger for error reporting
+	events   chan types.Event                                  // Channel for incoming events
+	handlers map[types.EventType]map[uint64]types.EventHandler // Map of event type to handlers
+	ctx      context.Context                                   // Context for lifecycle management
+	cancel   context.CancelFunc                                // Cancel function for context
+	mu       sync.RWMutex                                      // Mutex for thread-safe handler access
+	wg       sync.WaitGroup                                    // WaitGroup for goroutines
+	closed   bool                                              // Flag indicating if manager is closed
+	closedMu sync.Mutex                                        // Mutex for close flag
+	logger   types.Logger                                      // Logger for error reporting
+	nextID   uint64                                            // Next handler ID for unique keys
 }
 
 // NewEventManager creates a new event manager with the specified buffer size.
@@ -38,7 +39,7 @@ func NewEventManager(ctx context.Context, bufferSize int) *EventManager {
 	}
 	return &EventManager{
 		events:   make(chan types.Event, bufferSize),
-		handlers: make(map[types.EventType]map[uintptr]types.EventHandler),
+		handlers: make(map[types.EventType]map[uint64]types.EventHandler),
 		ctx:      ctx,
 		cancel:   cancel,
 		logger:   logger,
@@ -52,16 +53,11 @@ func (em *EventManager) Subscribe(eventType types.EventType, handler types.Event
 	defer em.mu.Unlock()
 
 	if em.handlers[eventType] == nil {
-		em.handlers[eventType] = make(map[uintptr]types.EventHandler)
+		em.handlers[eventType] = make(map[uint64]types.EventHandler)
 	}
 
-	// Use pointer address as key - handlers are functions which have addresses
-	key := uintptr(0)
-	if handler != nil {
-		// Get a unique identifier for the handler
-		funcPtr := *(*uintptr)(unsafe.Pointer(&handler))
-		key = funcPtr
-	}
+	// Use atomic counter for unique handler IDs (atomic operation, no lock needed)
+	key := atomic.AddUint64(&em.nextID, 1)
 
 	em.handlers[eventType][key] = handler
 
@@ -69,7 +65,7 @@ func (em *EventManager) Subscribe(eventType types.EventType, handler types.Event
 }
 
 // Unsubscribe removes an event handler by event type and key.
-func (em *EventManager) Unsubscribe(eventType types.EventType, key uintptr) {
+func (em *EventManager) Unsubscribe(eventType types.EventType, key uint64) {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 	if em.handlers[eventType] != nil {
