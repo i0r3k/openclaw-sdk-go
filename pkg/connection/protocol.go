@@ -10,6 +10,7 @@ package connection
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
@@ -43,22 +44,19 @@ func (p *ProtocolNegotiator) Negotiate(ctx context.Context, serverVersions []str
 	ctx, cancel := context.WithTimeout(ctx, p.defaultTimeout)
 	defer cancel()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return "", types.NewProtocolError("protocol negotiation timeout", ctx.Err())
-		default:
-			// Check for matching versions
-			for _, clientVer := range p.supportedVersions {
-				for _, serverVer := range serverVersions {
-					if clientVer == serverVer {
-						return clientVer, nil
-					}
-				}
+	// Wait for context cancellation or check version match
+	select {
+	case <-ctx.Done():
+		return "", types.NewProtocolError("protocol negotiation timeout", ctx.Err())
+	default:
+		// Check for matching versions
+		for _, clientVer := range p.supportedVersions {
+			if slices.Contains(serverVersions, clientVer) {
+				return clientVer, nil
 			}
-			// No match found
-			return "", types.NewProtocolError("no matching protocol version", nil)
 		}
+		// No match found
+		return "", types.NewProtocolError("no matching protocol version", nil)
 	}
 }
 
