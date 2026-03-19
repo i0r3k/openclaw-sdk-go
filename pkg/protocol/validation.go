@@ -7,7 +7,7 @@ package protocol
 
 import (
 	"errors"
-	"strings"
+	"regexp"
 )
 
 // ValidationError represents a validation error with field name and message.
@@ -55,18 +55,19 @@ func (v *Validator) ValidateRequestFrame(frame *RequestFrame) error {
 	if frame.Method == "" {
 		return &ValidationError{Field: "Method", Message: "is required"}
 	}
-	// Validate method format (namespace.method or namespace.sub.method)
-	parts := strings.Split(frame.Method, ".")
-	if len(parts) < 2 {
-		return &ValidationError{Field: "Method", Message: "must be in format 'namespace.method'"}
-	}
-	for _, part := range parts {
-		if part == "" {
-			return &ValidationError{Field: "Method", Message: "must be in format 'namespace.method'"}
-		}
+	// Validate method format using regex
+	// Must be: namespace.method or namespace.sub.method
+	// Each part: starts with letter/underscore, contains only alphanumeric/underscore, max 64 chars
+	if !methodNameRegex.MatchString(frame.Method) {
+		return &ValidationError{Field: "Method", Message: "must be in format 'namespace.method' with valid identifier names"}
 	}
 	return nil
 }
+
+// methodNameRegex validates method names:
+// - At least one dot (namespace.method)
+// - Each part: [a-zA-Z_][a-zA-Z0-9_]{0,63}
+var methodNameRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]{0,63}(\.[a-zA-Z_][a-zA-Z0-9_]{0,63})+$`)
 
 // ValidateResponseFrame validates a response frame
 func (v *Validator) ValidateResponseFrame(frame *ResponseFrame) error {
