@@ -15,11 +15,6 @@ import (
 // ErrInvalidCredentials is returned when credentials format is invalid.
 var ErrInvalidCredentials = errors.New("invalid credentials format")
 
-// Default credential keys
-const (
-	APIKeyKey = "api_key"
-)
-
 // CredentialsProvider provides credentials for authentication.
 // Implement this interface to provide custom credential sources.
 type CredentialsProvider interface {
