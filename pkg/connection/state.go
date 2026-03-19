@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/types"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 // StateChangeEvent represents a state change event in the connection lifecycle.

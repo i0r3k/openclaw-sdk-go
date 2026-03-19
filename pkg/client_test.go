@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/auth"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/auth"
 )
 
 func TestNewClient(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/protocol"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
 
 // RequestManager manages pending requests and their responses.

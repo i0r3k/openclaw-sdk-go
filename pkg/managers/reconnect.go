@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/types"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 // ReconnectConfig holds reconnection configuration.

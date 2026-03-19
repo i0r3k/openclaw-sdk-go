@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/protocol"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
 
 func TestRequestManager_SendAndReceive(t *testing.T) {

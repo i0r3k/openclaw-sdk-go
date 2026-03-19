@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/types"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 func TestConnectionManager_State(t *testing.T) {

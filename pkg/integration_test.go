@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 	"github.com/gorilla/websocket"
-	"github.com/i0r3k/openclaw-sdk-go/pkg/types"
 )
 
 // TestClient_NewClient tests basic client creation

@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/connection"
-	"github.com/i0r3k/openclaw-sdk-go/pkg/transport"
-	"github.com/i0r3k/openclaw-sdk-go/pkg/types"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/connection"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/transport"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 // ClientConfig holds client configuration for ConnectionManager.

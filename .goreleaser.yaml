@@ -9,14 +9,14 @@ project_name: openclaw-sdk-go
 # Release configuration
 release:
   github:
-    owner: i0r3k
+    owner: frisbee-ai
     name: openclaw-sdk-go
   draft: true
   mode: replace
   header: |
     ## What's Changed
   footer: |
-    **Full Changelog**: https://github.com/i0r3k/openclaw-sdk-go/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/frisbee-ai/openclaw-sdk-go/compare/{{ .PreviousTag }}...{{ .Tag }}
 
 # Build example binaries (optional, for user convenience)
 builds:

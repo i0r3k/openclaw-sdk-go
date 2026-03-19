@@ -15,12 +15,12 @@
 - [ ] **Step 1: Create go.mod**
 
 ```bash
-go mod init github.com/i0r3k/openclaw-sdk-go
+go mod init github.com/frisbee-ai/openclaw-sdk-go
 ```
 
 ```go
 // go.mod
-module github.com/i0r3k/openclaw-sdk-go
+module github.com/frisbee-ai/openclaw-sdk-go
 
 go 1.21
 ```

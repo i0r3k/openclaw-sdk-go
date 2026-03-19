@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/types"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 func TestEventManager_Subscribe(t *testing.T) {

@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"sync"
 
-	openclaw "github.com/i0r3k/openclaw-sdk-go"
+	openclaw "github.com/frisbee-ai/openclaw-sdk-go"
 )
 
 // StateChangeEvent represents a state change event
@@ -121,7 +121,7 @@ import (
 	"testing"
 	"time"
 
-	openclaw "github.com/i0r3k/openclaw-sdk-go"
+	openclaw "github.com/frisbee-ai/openclaw-sdk-go"
 )
 
 func TestConnectionStateMachine_Transition(t *testing.T) {
@@ -187,7 +187,7 @@ import (
 	"errors"
 	"time"
 
-	openclaw "github.com/i0r3k/openclaw-sdk-go"
+	openclaw "github.com/frisbee-ai/openclaw-sdk-go"
 )
 
 // ProtocolNegotiator handles protocol version negotiation
@@ -423,7 +423,7 @@ import (
 	"os"
 	"time"
 
-	openclaw "github.com/i0r3k/openclaw-sdk-go"
+	openclaw "github.com/frisbee-ai/openclaw-sdk-go"
 )
 
 // TlsValidator validates TLS certificates

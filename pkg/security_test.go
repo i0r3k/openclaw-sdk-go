@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/protocol"
-	"github.com/i0r3k/openclaw-sdk-go/pkg/types"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 // TestSecurity_InputValidation tests input validation

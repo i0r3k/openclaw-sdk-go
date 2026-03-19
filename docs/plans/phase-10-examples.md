@@ -33,8 +33,8 @@ import (
 	"syscall"
 	"time"
 
-	openclaw "github.com/i0r3k/openclaw-sdk-go"
-	"github.com/i0r3k/openclaw-sdk-go/pkg/openclaw/protocol"
+	openclaw "github.com/frisbee-ai/openclaw-sdk-go"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/openclaw/protocol"
 )
 
 func main() {

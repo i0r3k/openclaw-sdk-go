@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OpenClaw SDK Go is a Go implementation of the OpenClaw WebSocket SDK, migrated from TypeScript. It provides a feature-complete WebSocket client with connection management, event handling, request/response patterns, and automatic reconnection.
 
-**Module Path**: `github.com/i0r3k/openclaw-sdk-go`
+**Module Path**: `github.com/frisbee-ai/openclaw-sdk-go`
 
 ## Development Commands
 

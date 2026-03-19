@@ -63,4 +63,4 @@ jobs:
           fail_ci_if_error: false
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: i0r3k/openclaw-sdk-go
+          slug: frisbee-ai/openclaw-sdk-go

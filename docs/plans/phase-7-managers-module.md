@@ -25,7 +25,7 @@ import (
 	"context"
 
 	"openclaw-sdk-go"
-	"github.com/i0r3k/openclaw-sdk-go/pkg/openclaw/protocol"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/openclaw/protocol"
 	"openclaw-sdk-go/pkg/openclaw/transport"
 )
 
@@ -277,7 +277,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/openclaw/protocol"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/openclaw/protocol"
 )
 
 // RequestManager manages pending requests
@@ -386,7 +386,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/openclaw/protocol"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/openclaw/protocol"
 )
 
 func TestRequestManager_SendAndReceive(t *testing.T) {

@@ -10,9 +10,9 @@ package managers
 import (
 	"context"
 
-	"github.com/i0r3k/openclaw-sdk-go/pkg/protocol"
-	"github.com/i0r3k/openclaw-sdk-go/pkg/transport"
-	"github.com/i0r3k/openclaw-sdk-go/pkg/types"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/transport"
+	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 // EventEmitter is the interface for event emission.

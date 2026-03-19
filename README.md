@@ -22,7 +22,7 @@ OpenClaw SDK Go is a Go implementation migrated from the TypeScript version, pro
 ## Installation
 
 ```bash
-go get github.com/i0r3k/openclaw-sdk-go
+go get github.com/frisbee-ai/openclaw-sdk-go
 ```
 
 ## Quick Start
@@ -37,9 +37,9 @@ import (
     "fmt"
     "log"
 
-    openclaw "github.com/i0r3k/openclaw-sdk-go/pkg"
-    "github.com/i0r3k/openclaw-sdk-go/pkg/protocol"
-    "github.com/i0r3k/openclaw-sdk-go/pkg/types"
+    openclaw "github.com/frisbee-ai/openclaw-sdk-go/pkg"
+    "github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
+    "github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 func main() {
@@ -294,8 +294,8 @@ Apache License 2.0 - see [LICENSE](LICENSE) for details
 
 - [Design Document](docs/specs/2026-03-18-typescript-to-go-migration-design.md) - Architecture decisions
 - [Implementation Plans](docs/plans/) - Phased implementation plans
-- [GoDoc](https://pkg.go.dev/github.com/i0r3k/openclaw-sdk-go) - API reference
+- [GoDoc](https://pkg.go.dev/github.com/frisbee-ai/openclaw-sdk-go) - API reference
 
 ---
 
-Copyright © 2026 @i0r3k
+Copyright © 2026 @frisbee-ai
