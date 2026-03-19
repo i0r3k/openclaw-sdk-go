@@ -89,12 +89,16 @@ func (rm *ReconnectManager) run() {
 
 	for {
 		attempt++
+		// Use NewTimer instead of time.After to prevent memory leak
+		timer := time.NewTimer(delay)
 		select {
 		case <-rm.ctx.Done():
+			timer.Stop()
 			return
 		case <-rm.stopped:
+			timer.Stop()
 			return
-		case <-time.After(delay):
+		case <-timer.C:
 			rm.mu.Lock()
 			onReconnect := rm.onReconnect
 			onReconnectFailed := rm.onReconnectFailed
