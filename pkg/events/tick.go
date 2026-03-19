@@ -100,6 +100,11 @@ func (tm *TickMonitor) Stop() {
 		return
 	}
 	tm.running = false
+	// Mark as stopped to prevent double channel close
+	stopped := tm.stopped
+	tickCh := tm.tickCh
+	tm.stopped = nil
+	tm.tickCh = nil
 	tm.mu.Unlock()
 
 	tm.cancel()
@@ -117,9 +122,14 @@ func (tm *TickMonitor) Stop() {
 	// Wait for goroutine to finish
 	tm.wg.Wait()
 
-	// Close channel only after goroutine is done
-	close(tm.stopped)
-	close(tm.tickCh)
+	// Close channels only if they weren't already closed
+	// (protected by nil check since Stop is idempotent)
+	if stopped != nil {
+		close(stopped)
+	}
+	if tickCh != nil {
+		close(tickCh)
+	}
 }
 
 // run is the main monitoring loop.
@@ -147,14 +157,16 @@ func (tm *TickMonitor) run() {
 			}
 		case <-tm.timer.C:
 			// Timer fired - timeout occurred
+			// Check if still running before resetting
 			tm.mu.RLock()
 			onTimeout := tm.onTimeout
+			running := tm.running
 			tm.mu.RUnlock()
 			if onTimeout != nil && !lastTick.IsZero() {
 				onTimeout()
 			}
-			// Reset timer for next timeout
-			if !lastTick.IsZero() {
+			// Reset timer for next timeout (only if still running)
+			if running && !lastTick.IsZero() {
 				tm.timer.Reset(tm.timeout)
 			}
 		}
