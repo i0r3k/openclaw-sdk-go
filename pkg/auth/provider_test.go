@@ -37,5 +37,21 @@ func TestStaticCredentialsProvider_Empty(t *testing.T) {
 	}
 }
 
+func TestStaticCredentialsProvider_EmptyValue(t *testing.T) {
+	// Test that empty value in credentials is rejected
+	_, err := NewStaticCredentialsProvider(map[string]string{"api_key": ""})
+	if err == nil {
+		t.Error("expected error for empty credential value")
+	}
+}
+
+func TestStaticCredentialsProvider_WhitespaceValue(t *testing.T) {
+	// Test that whitespace-only value in credentials is rejected
+	_, err := NewStaticCredentialsProvider(map[string]string{"api_key": "   "})
+	if err == nil {
+		t.Error("expected error for whitespace-only credential value")
+	}
+}
+
 // Compile-time check: StaticCredentialsProvider implements CredentialsProvider
 var _ CredentialsProvider = (*StaticCredentialsProvider)(nil)

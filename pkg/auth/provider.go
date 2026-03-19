@@ -7,7 +7,18 @@
 //   - StaticAuthHandler: Simple static authentication implementation
 package auth
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
+
+// ErrInvalidCredentials is returned when credentials format is invalid.
+var ErrInvalidCredentials = errors.New("invalid credentials format")
+
+// Default credential keys
+const (
+	APIKeyKey = "api_key"
+)
 
 // CredentialsProvider provides credentials for authentication.
 // Implement this interface to provide custom credential sources.
@@ -23,15 +34,29 @@ type StaticCredentialsProvider struct {
 }
 
 // NewStaticCredentialsProvider creates a new static credentials provider.
-// Returns error if credentials is nil or empty.
+// Returns error if credentials is nil, empty, or contains invalid format.
 func NewStaticCredentialsProvider(credentials map[string]string) (*StaticCredentialsProvider, error) {
-	if credentials == nil {
-		return nil, errors.New("credentials cannot be nil")
-	}
-	if len(credentials) == 0 {
-		return nil, errors.New("credentials cannot be empty")
+	if err := validateCredentials(credentials); err != nil {
+		return nil, err
 	}
 	return &StaticCredentialsProvider{credentials: credentials}, nil
+}
+
+// validateCredentials checks that credentials are valid.
+func validateCredentials(credentials map[string]string) error {
+	if credentials == nil {
+		return errors.New("credentials cannot be nil")
+	}
+	if len(credentials) == 0 {
+		return errors.New("credentials cannot be empty")
+	}
+	// Validate credential format: check for required keys with non-empty values
+	for key, value := range credentials {
+		if strings.TrimSpace(value) == "" {
+			return errors.New("credentials cannot be empty: " + key)
+		}
+	}
+	return nil
 }
 
 // GetCredentials returns the stored credentials map.

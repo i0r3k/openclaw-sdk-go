@@ -30,13 +30,10 @@ type StaticAuthHandler struct {
 }
 
 // NewStaticAuthHandler creates a new static auth handler.
-// Returns error if credentials is nil or empty.
+// Returns error if credentials is nil, empty, or contains invalid format.
 func NewStaticAuthHandler(credentials map[string]string) (*StaticAuthHandler, error) {
-	if credentials == nil {
-		return nil, ErrNoCredentials
-	}
-	if len(credentials) == 0 {
-		return nil, ErrNoCredentials
+	if err := validateCredentials(credentials); err != nil {
+		return nil, err
 	}
 	return &StaticAuthHandler{credentials: credentials}, nil
 }
