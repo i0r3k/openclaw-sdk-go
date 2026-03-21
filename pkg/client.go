@@ -361,9 +361,6 @@ func NewClient(opts ...ClientOption) (OpenClawClient, error) {
 	// Initialize policy manager
 	c.policyManager = connection.NewPolicyManager()
 
-	// Set up connection event handlers
-	c.setupConnectionHandlers()
-
 	// Initialize API namespaces
 	c.requestFn = c.newRequestFn()
 	c.chatAPI = api.NewChatAPI(c.requestFn)
@@ -609,13 +606,6 @@ func (c *client) GetTickMonitor() *events.TickMonitor {
 // GetGapDetector returns the gap detector instance.
 func (c *client) GetGapDetector() *events.GapDetector {
 	return c.gapDetector
-}
-
-// setupConnectionHandlers sets up event handlers for the connection manager.
-func (c *client) setupConnectionHandlers() {
-	cm := c.managers.connection
-	// Handlers will be set via SetHandlers method
-	_ = cm // Placeholder - actual handler setup happens in connection manager
 }
 
 // newRequestFn creates a request function for API namespaces.
