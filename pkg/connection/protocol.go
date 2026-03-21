@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
@@ -119,7 +120,7 @@ func (p *ProtocolNegotiator) NegotiateWithServerVersions(ctx context.Context, se
 	// Find first matching version
 	for _, clientVer := range p.GetSupportedVersions() {
 		if slices.Contains(serverVersions, clientVer) {
-			return string(rune('0' + clientVer)), nil
+			return strconv.Itoa(clientVer), nil
 		}
 	}
 
