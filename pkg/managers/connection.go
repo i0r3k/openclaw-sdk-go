@@ -9,6 +9,7 @@ package managers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"sync"
@@ -106,8 +107,13 @@ func (cm *ConnectionManager) ConnectWithParams(ctx context.Context, params *conn
 	cm.connectParams = params
 	cm.mu.Unlock()
 
+	// Transition to authenticating state
+	if err := cm.state.Transition(types.StateAuthenticating, nil); err != nil {
+		_ = cm.Disconnect()
+		return err
+	}
+
 	// Perform handshake - send connect request and wait for HelloOk
-	// The HelloOk comes back as a response to our connect request
 	helloOk, err := cm.performHandshake(ctx, params)
 	if err != nil {
 		_ = cm.Disconnect()
@@ -118,8 +124,9 @@ func (cm *ConnectionManager) ConnectWithParams(ctx context.Context, params *conn
 	cm.serverInfo = helloOk
 	cm.mu.Unlock()
 
-	// Transition to ready state
+	// Transition to authenticated state
 	if err := cm.state.Transition(types.StateAuthenticated, nil); err != nil {
+		_ = cm.Disconnect()
 		return err
 	}
 
@@ -128,10 +135,38 @@ func (cm *ConnectionManager) ConnectWithParams(ctx context.Context, params *conn
 
 // performHandshake sends the connect request and waits for HelloOk response.
 func (cm *ConnectionManager) performHandshake(ctx context.Context, params *connection.ConnectParams) (*connection.HelloOk, error) {
-	// TODO: This is a simplified handshake - actual implementation
-	// would send a request and wait for response via the transport
-	// For now, return nil to indicate handshake is pending actual implementation
-	return nil, nil
+	cm.mu.Lock()
+	transport := cm.transport
+	cm.mu.Unlock()
+
+	if transport == nil {
+		return nil, types.NewConnectionError("HANDSHAKE_NO_TRANSPORT", "no transport available for handshake", false, nil)
+	}
+
+	// Marshal connect params
+	data, err := json.Marshal(params)
+	if err != nil {
+		return nil, types.NewConnectionError("HANDSHAKE_MARSHAL_FAILED", "failed to marshal connect params", false, err)
+	}
+
+	// Send connect request
+	if err := transport.Send(data); err != nil {
+		return nil, types.NewConnectionError("HANDSHAKE_SEND_FAILED", "failed to send handshake", false, err)
+	}
+
+	// Wait for HelloOk response
+	select {
+	case resp := <-transport.Receive():
+		var helloOk connection.HelloOk
+		if err := json.Unmarshal(resp, &helloOk); err != nil {
+			return nil, types.NewProtocolError("HANDSHAKE_INVALID_RESPONSE", "failed to parse hello-ok response", false, err)
+		}
+		return &helloOk, nil
+	case err := <-transport.Errors():
+		return nil, types.NewConnectionError("HANDSHAKE_CONNECTION_ERROR", "connection error during handshake", false, err)
+	case <-ctx.Done():
+		return nil, types.NewConnectionError("HANDSHAKE_TIMEOUT", "handshake timed out", false, ctx.Err())
+	}
 }
 
 // GetServerInfo returns the server info from the handshake.
