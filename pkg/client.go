@@ -27,6 +27,8 @@ package openclaw
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -712,9 +714,11 @@ func (c *client) processServerInfo() {
 	}
 }
 
-// generateRequestID generates a unique request ID.
+// generateRequestID generates a unique request ID using crypto/rand.
 func generateRequestID() string {
-	return fmt.Sprintf("req-%d-%d", time.Now().UnixMilli(), time.Now().UnixNano()%10000)
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return "req-" + hex.EncodeToString(b)
 }
 
 // Close shuts down the client and releases all resources.
