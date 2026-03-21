@@ -707,8 +707,7 @@ func (c *client) processServerInfo() {
 	if c.protocolNegotiator != nil {
 		_, err := c.protocolNegotiator.Negotiate(context.Background(), serverInfo)
 		if err != nil {
-			// Log error but don't fail connection
-			_ = err
+			c.config.Logger.Error("protocol negotiation failed", "error", err)
 		}
 	}
 
