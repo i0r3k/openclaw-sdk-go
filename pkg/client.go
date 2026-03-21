@@ -143,6 +143,7 @@ type ClientConfig struct {
 	Header              map[string][]string             // Custom HTTP headers for WebSocket handshake
 	TLSConfig           *transport.TLSConfig            // TLS/SSL configuration
 	EventBufferSize     int                             // Buffer size for event channel
+	EventEmitTimeout    time.Duration                   // Timeout for Emit operations when channel is full
 	ReconnectEnabled    bool                            // Enable automatic reconnection
 	ReconnectConfig     *ReconnectConfig                // Reconnection configuration
 	AuthHandler         auth.AuthHandler                // Authentication handler (deprecated: use CredentialsProvider)
@@ -175,9 +176,10 @@ type GapInfo struct {
 // Default event buffer size is 100, and uses a default logger.
 func DefaultClientConfig() *ClientConfig {
 	return &ClientConfig{
-		EventBufferSize: 100,
-		Mode:            "go",
-		Logger:          NewDefaultLogger(),
+		EventBufferSize:  100,
+		EventEmitTimeout: 200 * time.Millisecond,
+		Mode:             "go",
+		Logger:           NewDefaultLogger(),
 	}
 }
 
@@ -256,6 +258,15 @@ func WithTLSConfig(tlsConfig *transport.TLSConfig) ClientOption {
 func WithEventBufferSize(size int) ClientOption {
 	return func(c *ClientConfig) error {
 		c.EventBufferSize = size
+		return nil
+	}
+}
+
+// WithEventEmitTimeout sets the timeout for Emit operations when the channel is full.
+// Default is 100ms. Events are dropped after timeout expires.
+func WithEventEmitTimeout(timeout time.Duration) ClientOption {
+	return func(c *ClientConfig) error {
+		c.EventEmitTimeout = timeout
 		return nil
 	}
 }
@@ -348,7 +359,7 @@ func NewClient(opts ...ClientOption) (OpenClawClient, error) {
 	}
 
 	// Initialize managers
-	c.managers.event = managers.NewEventManager(ctx, cfg.EventBufferSize)
+	c.managers.event = managers.NewEventManager(ctx, cfg.EventBufferSize, cfg.EventEmitTimeout)
 	c.managers.request = managers.NewRequestManager(ctx)
 	c.managers.connection = managers.NewConnectionManager(ctx, &managers.ClientConfig{
 		URL:    cfg.URL,

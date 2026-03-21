@@ -12,7 +12,7 @@ import (
 
 func TestEventManager_Subscribe(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 
 	var mu sync.Mutex
 	handlerCalled := false
@@ -52,7 +52,7 @@ func TestEventManager_Subscribe(t *testing.T) {
 
 func TestEventManager_Unsubscribe(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 
 	handler := func(e types.Event) {}
 	unsubscribe := em.Subscribe(types.EventConnect, handler)
@@ -67,7 +67,7 @@ func TestEventManager_Unsubscribe(t *testing.T) {
 
 func TestEventManager_MultipleHandlers(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 
 	var wg sync.WaitGroup
 	handler1Called := false
@@ -110,7 +110,7 @@ func TestEventManager_MultipleHandlers(t *testing.T) {
 
 func TestEventManager_DifferentEventTypes(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 
 	var mu sync.Mutex
 	connectCalled := false
@@ -155,7 +155,7 @@ func TestEventManager_DifferentEventTypes(t *testing.T) {
 
 func TestEventManager_PanicRecovery(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 
 	var goodHandlerCalled atomic.Bool
 
@@ -191,7 +191,7 @@ func TestEventManager_PanicRecovery(t *testing.T) {
 
 func TestEventManager_ConcurrentSubscribeUnsubscribe(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 100)
+	em := NewEventManager(ctx, 100, 20*time.Millisecond)
 
 	var wg sync.WaitGroup
 	em.Start()
@@ -229,7 +229,7 @@ func TestEventManager_ConcurrentSubscribeUnsubscribe(t *testing.T) {
 
 func TestEventManager_CloseIdempotent(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 
 	em.Start()
 
@@ -252,7 +252,7 @@ func TestEventManager_CloseIdempotent(t *testing.T) {
 func TestEventManager_EmitNonBlocking(t *testing.T) {
 	ctx := context.Background()
 	// Small buffer to test non-blocking emit
-	em := NewEventManager(ctx, 1)
+	em := NewEventManager(ctx, 1, 20*time.Millisecond)
 	em.Start()
 
 	// Fill the channel
@@ -267,7 +267,7 @@ func TestEventManager_EmitNonBlocking(t *testing.T) {
 
 func TestEventManager_NilHandler(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 
 	// Subscribe with nil handler - should not panic
 	unsubscribe := em.Subscribe(types.EventConnect, nil)
@@ -283,7 +283,7 @@ func TestEventManager_NilHandler(t *testing.T) {
 
 func TestEventManager_Events(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 
 	// Events() should return the event channel
 	ch := em.Events()
@@ -296,7 +296,7 @@ func TestEventManager_Events(t *testing.T) {
 
 func TestEventManager_EventsAfterClose(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	em.Start()
 	_ = em.Close()
 
@@ -304,5 +304,103 @@ func TestEventManager_EventsAfterClose(t *testing.T) {
 	ch := em.Events()
 	if ch == nil {
 		t.Error("expected non-nil channel from Events() after close")
+	}
+}
+
+func TestEventManager_Emit_BackpressureTimeout(t *testing.T) {
+	ctx := context.Background()
+	em := NewEventManager(ctx, 1, 50*time.Millisecond)
+	// Do NOT start the event manager - events will accumulate in the channel
+	// This allows us to test backpressure without dispatcher consuming events
+
+	// Fill the channel
+	em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()})
+
+	// Time how long the blocked emit takes
+	start := time.Now()
+	em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()}) // Should wait ~50ms then drop
+	elapsed := time.Since(start)
+
+	// Should have waited approximately the timeout duration before returning
+	if elapsed < 40*time.Millisecond {
+		t.Errorf("expected emit to wait at least 40ms, got %v", elapsed)
+	}
+	if elapsed > 100*time.Millisecond {
+		t.Errorf("expected emit to wait at most 100ms, got %v", elapsed)
+	}
+
+	_ = em.Close()
+}
+
+func TestEventManager_Emit_ContextCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	em := NewEventManager(ctx, 1, 1*time.Second) // Long timeout
+	em.Start()
+
+	// Fill the channel
+	em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()})
+
+	// Cancel context
+	cancel()
+
+	// Emit should return immediately due to context cancellation
+	start := time.Now()
+	em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()})
+	elapsed := time.Since(start)
+
+	// Should not have waited for timeout
+	if elapsed > 20*time.Millisecond {
+		t.Errorf("expected emit to return immediately on context cancellation, got %v", elapsed)
+	}
+
+	_ = em.Close()
+}
+
+func TestEventManager_Emit_NormalPath(t *testing.T) {
+	ctx := context.Background()
+	em := NewEventManager(ctx, 10, 50*time.Millisecond)
+	em.Start()
+	defer em.Close()
+
+	// Normal emit should not block
+	start := time.Now()
+	for i := 0; i < 10; i++ {
+		em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()})
+	}
+	elapsed := time.Since(start)
+
+	// Should complete quickly without any timeout waits
+	if elapsed > 20*time.Millisecond {
+		t.Errorf("expected normal emits to complete quickly, got %v", elapsed)
+	}
+}
+
+func TestEventManager_Emit_ConcurrentWithDispatch(t *testing.T) {
+	ctx := context.Background()
+	em := NewEventManager(ctx, 5, 50*time.Millisecond)
+	em.Start()
+	defer em.Close()
+
+	var counter atomic.Int64
+	em.Subscribe(types.EventConnect, func(e types.Event) {
+		time.Sleep(10 * time.Millisecond) // Simulate slow handler
+		counter.Add(1)
+	})
+
+	// Emit events concurrently while dispatcher is processing
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()})
+		}()
+	}
+
+	wg.Wait()
+	time.Sleep(100 * time.Millisecond) // Allow dispatch to complete
+
+	if counter.Load() == 0 {
+		t.Error("expected some events to be dispatched")
 	}
 }

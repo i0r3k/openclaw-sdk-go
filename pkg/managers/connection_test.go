@@ -73,7 +73,7 @@ func (t *mockTransport) IsConnected() bool {
 func TestConnectionManager_State(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	state := cm.State()
@@ -87,7 +87,7 @@ func TestConnectionManager_State(t *testing.T) {
 func TestConnectionManager_DisconnectWhenNotConnected(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	// Disconnect when not connected should not error
@@ -102,7 +102,7 @@ func TestConnectionManager_DisconnectWhenNotConnected(t *testing.T) {
 func TestConnectionManager_TransportWhenNotConnected(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	transport := cm.Transport()
@@ -116,7 +116,7 @@ func TestConnectionManager_TransportWhenNotConnected(t *testing.T) {
 func TestConnectionManager_GetServerInfo(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	// Initially nil
@@ -152,7 +152,7 @@ func TestConnectionManager_GetServerInfo(t *testing.T) {
 func TestConnectionManager_Close(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	// Close delegates to Disconnect
@@ -172,7 +172,7 @@ func TestConnectionManager_Close(t *testing.T) {
 func TestConnectionManager_Reconnect_NoParams(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	// Without stored params, Reconnect falls back to Connect which will fail
@@ -188,7 +188,7 @@ func TestConnectionManager_Reconnect_NoParams(t *testing.T) {
 func TestConnectionManager_Connect(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	// Connect to non-existent server should fail
@@ -203,7 +203,7 @@ func TestConnectionManager_Connect(t *testing.T) {
 func TestConnectionManager_Connect_AlreadyConnected(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	// Can't actually test already connected without a mock transport
@@ -219,7 +219,7 @@ func TestConnectionManager_Connect_AlreadyConnected(t *testing.T) {
 func TestConnectionManager_performHandshake_NoTransport(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	params := &connection.ConnectParams{
@@ -244,7 +244,7 @@ func TestConnectionManager_performHandshake_NoTransport(t *testing.T) {
 func TestConnectionManager_performHandshake_SendError(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	// Inject mock transport that fails on send
@@ -277,7 +277,7 @@ func TestConnectionManager_performHandshake_SendError(t *testing.T) {
 func TestConnectionManager_performHandshake_Success(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	mockT := newMockTransport()
@@ -328,7 +328,7 @@ func TestConnectionManager_performHandshake_Success(t *testing.T) {
 func TestConnectionManager_performHandshake_TransportError(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	mockT := newMockTransport()
@@ -364,7 +364,7 @@ func TestConnectionManager_performHandshake_TransportError(t *testing.T) {
 func TestConnectionManager_performHandshake_ContextCancelled(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	mockT := newMockTransport()
@@ -398,7 +398,7 @@ func TestConnectionManager_performHandshake_ContextCancelled(t *testing.T) {
 func TestConnectionManager_Disconnect_WithTransport(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	mockT := newMockTransport()
@@ -429,7 +429,7 @@ func TestConnectionManager_Disconnect_WithTransport(t *testing.T) {
 func TestConnectionManager_Disconnect_StateTransitionError(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	mockT := newMockTransport()
@@ -452,7 +452,7 @@ func TestConnectionManager_Disconnect_StateTransitionError(t *testing.T) {
 func TestConnectionManager_ConnectWithParams_ConnectFails(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	params := &connection.ConnectParams{
@@ -477,7 +477,7 @@ func TestConnectionManager_ConnectWithParams_ConnectFails(t *testing.T) {
 func TestConnectionManager_Reconnect_WithParams(t *testing.T) {
 	ctx := context.Background()
 	config := &ClientConfig{URL: "ws://localhost:8080"}
-	em := NewEventManager(ctx, 10)
+	em := NewEventManager(ctx, 10, 20*time.Millisecond)
 	cm := NewConnectionManager(ctx, config, em)
 
 	// Set connectParams (but can't test actual reconnect without real server)

@@ -11,6 +11,7 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
@@ -18,31 +19,34 @@ import (
 // EventManager manages event subscriptions and dispatching.
 // It provides a thread-safe pub/sub system for SDK events.
 type EventManager struct {
-	events   chan types.Event                                  // Channel for incoming events
-	handlers map[types.EventType]map[uint64]types.EventHandler // Map of event type to handlers
-	ctx      context.Context                                   // Context for lifecycle management
-	cancel   context.CancelFunc                                // Cancel function for context
-	mu       sync.RWMutex                                      // Mutex for thread-safe handler access
-	wg       sync.WaitGroup                                    // WaitGroup for goroutines
-	closed   bool                                              // Flag indicating if manager is closed
-	closedMu sync.Mutex                                        // Mutex for close flag
-	logger   types.Logger                                      // Logger for error reporting
-	nextID   uint64                                            // Next handler ID for unique keys
+	events      chan types.Event                                  // Channel for incoming events
+	handlers    map[types.EventType]map[uint64]types.EventHandler // Map of event type to handlers
+	ctx         context.Context                                   // Context for lifecycle management
+	cancel      context.CancelFunc                                // Cancel function for context
+	mu          sync.RWMutex                                      // Mutex for thread-safe handler access
+	wg          sync.WaitGroup                                    // WaitGroup for goroutines
+	closed      bool                                              // Flag indicating if manager is closed
+	closedMu    sync.Mutex                                        // Mutex for close flag
+	logger      types.Logger                                      // Logger for error reporting
+	nextID      uint64                                            // Next handler ID for unique keys
+	emitTimeout time.Duration                                     // Timeout for Emit operations
 }
 
 // NewEventManager creates a new event manager with the specified buffer size.
-func NewEventManager(ctx context.Context, bufferSize int) *EventManager {
+// The emitTimeout controls how long Emit will wait when the channel is full before dropping the event.
+func NewEventManager(ctx context.Context, bufferSize int, emitTimeout time.Duration) *EventManager {
 	ctx, cancel := context.WithCancel(ctx)
 	logger, _ := types.FromContext(ctx)
 	if logger == nil {
 		logger = &types.NopLogger{}
 	}
 	return &EventManager{
-		events:   make(chan types.Event, bufferSize),
-		handlers: make(map[types.EventType]map[uint64]types.EventHandler),
-		ctx:      ctx,
-		cancel:   cancel,
-		logger:   logger,
+		events:      make(chan types.Event, bufferSize),
+		handlers:    make(map[types.EventType]map[uint64]types.EventHandler),
+		ctx:         ctx,
+		cancel:      cancel,
+		logger:      logger,
+		emitTimeout: emitTimeout,
 	}
 }
 
@@ -79,13 +83,12 @@ func (em *EventManager) Events() <-chan types.Event {
 }
 
 // Emit emits an event to the event channel.
-// Non-blocking: if the channel is full, logs a warning and drops the event.
+// It blocks for up to emitTimeout when the channel is full before dropping the event.
 func (em *EventManager) Emit(event types.Event) {
 	select {
 	case em.events <- event:
 	case <-em.ctx.Done():
-	default:
-		// Channel full — log warning and drop event
+	case <-time.After(em.emitTimeout):
 		em.logger.Warn("event channel full, dropping event", "type", event.Type)
 	}
 }
