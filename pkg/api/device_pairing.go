@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
@@ -19,11 +20,15 @@ func NewDevicePairingAPI(request RequestFn) *DevicePairingAPI {
 
 // List returns all device pairings.
 func (api *DevicePairingAPI) List(ctx context.Context) ([]DevicePairingInfo, error) {
-	result, err := api.request(ctx, "devicePairing.list", protocol.DevicePairListParams{})
+	raw, err := api.request(ctx, "devicePairing.list", protocol.DevicePairListParams{})
 	if err != nil {
 		return nil, err
 	}
-	return result.([]DevicePairingInfo), nil
+	var result []DevicePairingInfo
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // Approve approves a device pairing.

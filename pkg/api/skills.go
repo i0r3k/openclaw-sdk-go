@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
@@ -18,26 +19,34 @@ func NewSkillsAPI(request RequestFn) *SkillsAPI {
 }
 
 // Status returns skills status.
-func (api *SkillsAPI) Status(ctx context.Context, params protocol.SkillsStatusParams) (any, error) {
+func (api *SkillsAPI) Status(ctx context.Context, params protocol.SkillsStatusParams) (json.RawMessage, error) {
 	return api.request(ctx, "skills.status", params)
 }
 
 // ToolsCatalog returns the tools catalog.
 func (api *SkillsAPI) ToolsCatalog(ctx context.Context) (protocol.ToolsCatalogResult, error) {
-	result, err := api.request(ctx, "skills.toolsCatalog", protocol.ToolsCatalogParams{})
+	raw, err := api.request(ctx, "skills.toolsCatalog", protocol.ToolsCatalogParams{})
 	if err != nil {
 		return protocol.ToolsCatalogResult{}, err
 	}
-	return result.(protocol.ToolsCatalogResult), nil
+	var result protocol.ToolsCatalogResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.ToolsCatalogResult{}, err
+	}
+	return result, nil
 }
 
 // Bins returns skills bins.
 func (api *SkillsAPI) Bins(ctx context.Context) (protocol.SkillsBinsResult, error) {
-	result, err := api.request(ctx, "skills.bins", protocol.SkillsBinsParams{})
+	raw, err := api.request(ctx, "skills.bins", protocol.SkillsBinsParams{})
 	if err != nil {
 		return protocol.SkillsBinsResult{}, err
 	}
-	return result.(protocol.SkillsBinsResult), nil
+	var result protocol.SkillsBinsResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.SkillsBinsResult{}, err
+	}
+	return result, nil
 }
 
 // Install installs a skill.

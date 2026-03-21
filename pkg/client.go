@@ -618,7 +618,7 @@ func (c *client) setupConnectionHandlers() {
 
 // newRequestFn creates a request function for API namespaces.
 func (c *client) newRequestFn() api.RequestFn {
-	return func(ctx context.Context, method string, params interface{}) (interface{}, error) {
+	return func(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
 		paramsJSON, err := json.Marshal(params)
 		if err != nil {
 			return nil, err

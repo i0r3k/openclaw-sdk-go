@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
@@ -25,20 +26,28 @@ func (api *ChatAPI) Inject(ctx context.Context, params protocol.ChatInjectParams
 
 // List returns all chats.
 func (api *ChatAPI) List(ctx context.Context) (protocol.ChatListResult, error) {
-	result, err := api.request(ctx, "chat.list", protocol.ChatListParams{})
+	raw, err := api.request(ctx, "chat.list", protocol.ChatListParams{})
 	if err != nil {
 		return protocol.ChatListResult{}, err
 	}
-	return result.(protocol.ChatListResult), nil
+	var result protocol.ChatListResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.ChatListResult{}, err
+	}
+	return result, nil
 }
 
 // History returns chat history.
 func (api *ChatAPI) History(ctx context.Context, params protocol.ChatHistoryParams) (protocol.ChatHistoryResult, error) {
-	result, err := api.request(ctx, "chat.history", params)
+	raw, err := api.request(ctx, "chat.history", params)
 	if err != nil {
 		return protocol.ChatHistoryResult{}, err
 	}
-	return result.(protocol.ChatHistoryResult), nil
+	var result protocol.ChatHistoryResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.ChatHistoryResult{}, err
+	}
+	return result, nil
 }
 
 // Delete deletes a chat.
@@ -49,9 +58,13 @@ func (api *ChatAPI) Delete(ctx context.Context, params protocol.ChatDeleteParams
 
 // Title returns the title of a chat.
 func (api *ChatAPI) Title(ctx context.Context, params protocol.ChatTitleParams) (protocol.ChatTitleResult, error) {
-	result, err := api.request(ctx, "chat.title", params)
+	raw, err := api.request(ctx, "chat.title", params)
 	if err != nil {
 		return protocol.ChatTitleResult{}, err
 	}
-	return result.(protocol.ChatTitleResult), nil
+	var result protocol.ChatTitleResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.ChatTitleResult{}, err
+	}
+	return result, nil
 }

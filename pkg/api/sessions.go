@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
@@ -19,20 +20,28 @@ func NewSessionsAPI(request RequestFn) *SessionsAPI {
 
 // List returns all sessions.
 func (api *SessionsAPI) List(ctx context.Context) (protocol.SessionsListResult, error) {
-	result, err := api.request(ctx, "sessions.list", protocol.SessionsListParams{})
+	raw, err := api.request(ctx, "sessions.list", protocol.SessionsListParams{})
 	if err != nil {
 		return protocol.SessionsListResult{}, err
 	}
-	return result.(protocol.SessionsListResult), nil
+	var result protocol.SessionsListResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.SessionsListResult{}, err
+	}
+	return result, nil
 }
 
 // Preview returns a session preview.
 func (api *SessionsAPI) Preview(ctx context.Context, params protocol.SessionsPreviewParams) (protocol.SessionsPreviewResult, error) {
-	result, err := api.request(ctx, "sessions.preview", params)
+	raw, err := api.request(ctx, "sessions.preview", params)
 	if err != nil {
 		return protocol.SessionsPreviewResult{}, err
 	}
-	return result.(protocol.SessionsPreviewResult), nil
+	var result protocol.SessionsPreviewResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.SessionsPreviewResult{}, err
+	}
+	return result, nil
 }
 
 // Resolve resolves a session.
@@ -67,9 +76,13 @@ func (api *SessionsAPI) Compact(ctx context.Context) error {
 
 // Usage returns session usage information.
 func (api *SessionsAPI) Usage(ctx context.Context) (protocol.SessionsUsageResult, error) {
-	result, err := api.request(ctx, "sessions.usage", protocol.SessionsUsageParams{})
+	raw, err := api.request(ctx, "sessions.usage", protocol.SessionsUsageParams{})
 	if err != nil {
 		return protocol.SessionsUsageResult{}, err
 	}
-	return result.(protocol.SessionsUsageResult), nil
+	var result protocol.SessionsUsageResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.SessionsUsageResult{}, err
+	}
+	return result, nil
 }

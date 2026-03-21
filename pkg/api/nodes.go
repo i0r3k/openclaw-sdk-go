@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
@@ -24,15 +25,19 @@ type NodesPairingAPI struct {
 
 // List returns all nodes.
 func (api *NodesAPI) List(ctx context.Context) ([]NodeInfo, error) {
-	result, err := api.request(ctx, "node.list", protocol.NodeListParams{})
+	raw, err := api.request(ctx, "node.list", protocol.NodeListParams{})
 	if err != nil {
 		return nil, err
 	}
-	return result.([]NodeInfo), nil
+	var result []NodeInfo
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // Invoke invokes a method on a node.
-func (api *NodesAPI) Invoke(ctx context.Context, params protocol.NodeInvokeParams) (any, error) {
+func (api *NodesAPI) Invoke(ctx context.Context, params protocol.NodeInvokeParams) (json.RawMessage, error) {
 	return api.request(ctx, "node.invoke", params)
 }
 
@@ -44,11 +49,15 @@ func (api *NodesAPI) Event(ctx context.Context, params protocol.NodeEventParams)
 
 // PendingDrain drains pending items from a node.
 func (api *NodesAPI) PendingDrain(ctx context.Context, params protocol.NodePendingDrainParams) (protocol.NodePendingDrainResult, error) {
-	result, err := api.request(ctx, "node.pending.drain", params)
+	raw, err := api.request(ctx, "node.pending.drain", params)
 	if err != nil {
 		return protocol.NodePendingDrainResult{}, err
 	}
-	return result.(protocol.NodePendingDrainResult), nil
+	var result protocol.NodePendingDrainResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.NodePendingDrainResult{}, err
+	}
+	return result, nil
 }
 
 // PendingEnqueue enqueues an item on a node.
@@ -64,11 +73,15 @@ func (api *NodesAPI) Pairing() *NodesPairingAPI {
 
 // List lists node pairings.
 func (p *NodesPairingAPI) List(ctx context.Context, params protocol.NodePairListParams) ([]NodePairingInfo, error) {
-	result, err := p.request(ctx, "node.pairing.list", params)
+	raw, err := p.request(ctx, "node.pairing.list", params)
 	if err != nil {
 		return nil, err
 	}
-	return result.([]NodePairingInfo), nil
+	var result []NodePairingInfo
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // Approve approves a node pairing.

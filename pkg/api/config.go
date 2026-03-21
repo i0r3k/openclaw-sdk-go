@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
@@ -18,7 +19,7 @@ func NewConfigAPI(request RequestFn) *ConfigAPI {
 }
 
 // Get returns config value(s).
-func (api *ConfigAPI) Get(ctx context.Context, params protocol.ConfigGetParams) (any, error) {
+func (api *ConfigAPI) Get(ctx context.Context, params protocol.ConfigGetParams) (json.RawMessage, error) {
 	return api.request(ctx, "config.get", params)
 }
 
@@ -42,9 +43,13 @@ func (api *ConfigAPI) Patch(ctx context.Context, params protocol.ConfigPatchPara
 
 // Schema returns config schema.
 func (api *ConfigAPI) Schema(ctx context.Context, params protocol.ConfigSchemaParams) (protocol.ConfigSchemaResponse, error) {
-	result, err := api.request(ctx, "config.schema", params)
+	raw, err := api.request(ctx, "config.schema", params)
 	if err != nil {
 		return protocol.ConfigSchemaResponse{}, err
 	}
-	return result.(protocol.ConfigSchemaResponse), nil
+	var result protocol.ConfigSchemaResponse
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.ConfigSchemaResponse{}, err
+	}
+	return result, nil
 }

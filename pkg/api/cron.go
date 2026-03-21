@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/protocol"
 )
@@ -19,20 +20,28 @@ func NewCronAPI(request RequestFn) *CronAPI {
 
 // List returns all cron jobs.
 func (api *CronAPI) List(ctx context.Context) ([]protocol.CronJob, error) {
-	result, err := api.request(ctx, "cron.list", protocol.CronListParams{})
+	raw, err := api.request(ctx, "cron.list", protocol.CronListParams{})
 	if err != nil {
 		return nil, err
 	}
-	return result.([]protocol.CronJob), nil
+	var result []protocol.CronJob
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // Status returns cron job status.
 func (api *CronAPI) Status(ctx context.Context, params protocol.CronStatusParams) (protocol.CronJob, error) {
-	result, err := api.request(ctx, "cron.status", params)
+	raw, err := api.request(ctx, "cron.status", params)
 	if err != nil {
 		return protocol.CronJob{}, err
 	}
-	return result.(protocol.CronJob), nil
+	var result protocol.CronJob
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.CronJob{}, err
+	}
+	return result, nil
 }
 
 // Add adds a new cron job.
@@ -61,9 +70,13 @@ func (api *CronAPI) Run(ctx context.Context, params protocol.CronRunParams) erro
 
 // Runs returns cron run history.
 func (api *CronAPI) Runs(ctx context.Context, params protocol.CronRunsParams) ([]protocol.CronRunLogEntry, error) {
-	result, err := api.request(ctx, "cron.runs", params)
+	raw, err := api.request(ctx, "cron.runs", params)
 	if err != nil {
 		return nil, err
 	}
-	return result.([]protocol.CronRunLogEntry), nil
+	var result []protocol.CronRunLogEntry
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
