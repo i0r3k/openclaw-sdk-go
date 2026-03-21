@@ -34,6 +34,7 @@ type RequestManager struct {
 	mu       sync.Mutex                    // Mutex for thread-safe access
 	ctx      context.Context               // Context for lifecycle management
 	cancel   context.CancelFunc            // Cancel function for context
+	closed   bool                          // Flag indicating manager is closed
 }
 
 // NewRequestManager creates a new request manager.
@@ -152,6 +153,10 @@ func (rm *RequestManager) Clear() {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
+	if rm.closed {
+		return
+	}
+
 	for id, req := range rm.pending {
 		close(req.responseCh)
 		delete(rm.pending, id)
@@ -165,6 +170,13 @@ func (rm *RequestManager) Clear() {
 // It cancels the context, closes all pending channels, and clears timeout functions.
 func (rm *RequestManager) Close() error {
 	rm.mu.Lock()
+	defer rm.mu.Unlock()
+
+	if rm.closed {
+		return nil
+	}
+	rm.closed = true
+
 	// First cancel context while holding lock to prevent new operations
 	rm.cancel()
 	// Clear pending map and timeouts
@@ -175,6 +187,5 @@ func (rm *RequestManager) Close() error {
 	for _, cancel := range rm.timeouts {
 		cancel()
 	}
-	rm.mu.Unlock()
 	return nil
 }
