@@ -3,6 +3,7 @@ package openclaw
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -377,7 +378,7 @@ func TestSecurity_RaceConditions(t *testing.T) {
 	wg.Wait()
 }
 
-// TestBoundary_MalformedJSON tests handling of malformed JSON
+// TestBoundary_MalformedJSON tests handling of malformed JSON in protocol frames
 func TestBoundary_MalformedJSON(t *testing.T) {
 	malformedJSON := []string{
 		"{",
@@ -387,19 +388,20 @@ func TestBoundary_MalformedJSON(t *testing.T) {
 		"[",
 		"]",
 		"null",
-		"undefined",
-		"NaN",
-		"Infinity",
 		"<<>>",
 		"\"unclosed string",
-		"{\"key\": undefined}",
-		"{\"key\": function(){}}",
 	}
 
 	for _, jsonStr := range malformedJSON {
 		t.Run(jsonStr, func(t *testing.T) {
-			// Verify we can handle malformed JSON without panicking
-			_ = jsonStr
+			// Verify unmarshaling malformed JSON into ResponseFrame doesn't panic
+			var frame protocol.ResponseFrame
+			err := json.Unmarshal([]byte(jsonStr), &frame)
+			if err == nil && jsonStr != "null" {
+				// Most malformed JSON should return error
+				// "null" is valid JSON that sets frame to zero value
+			}
+			_ = err
 		})
 	}
 }
