@@ -79,11 +79,14 @@ func (em *EventManager) Events() <-chan types.Event {
 }
 
 // Emit emits an event to the event channel.
-// Non-blocking: if the channel is full, it will return immediately.
+// Non-blocking: if the channel is full, logs a warning and drops the event.
 func (em *EventManager) Emit(event types.Event) {
 	select {
 	case em.events <- event:
 	case <-em.ctx.Done():
+	default:
+		// Channel full — log warning and drop event
+		em.logger.Warn("event channel full, dropping event", "type", event.Type)
 	}
 }
 
