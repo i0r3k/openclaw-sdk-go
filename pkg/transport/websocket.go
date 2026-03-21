@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -104,6 +105,11 @@ func Dial(ctx context.Context, url string, header http.Header, config *WebSocket
 
 	// Convert TLSConfig to crypto/tls.Config if provided
 	if config != nil && config.TLSConfig != nil {
+		// Warn about insecure TLS configuration at dial time
+		if config.TLSConfig.InsecureSkipVerify {
+			fmt.Fprintf(os.Stderr, "WARNING: InsecureSkipVerify is enabled - server certificate verification is disabled. This is insecure and should only be used for testing or in controlled environments.\n")
+		}
+
 		// Use connection.TlsValidator to properly load certificates
 		tlsConfig := &connection.TLSConfig{
 			InsecureSkipVerify: config.TLSConfig.InsecureSkipVerify,
