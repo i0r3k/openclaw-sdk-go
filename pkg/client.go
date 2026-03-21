@@ -550,11 +550,11 @@ func (c *client) SendRequest(ctx context.Context, req *protocol.RequestFrame) (*
 		return c.managers.request.SendRequest(ctx, req, sendFunc)
 	}
 
+	data, err := json.Marshal(req)
+	if err != nil {
+		return nil, NewProtocolError(string(types.ProtocolErrFrameTooLarge), "failed to marshal request", false, nil)
+	}
 	sendFunc := func(r *protocol.RequestFrame) error {
-		data, err := json.Marshal(r)
-		if err != nil {
-			return err
-		}
 		return c.managers.connection.Transport().Send(data)
 	}
 	return c.managers.request.SendRequest(ctx, req, sendFunc)
@@ -642,7 +642,7 @@ func (c *client) GetGapDetector() *events.GapDetector {
 
 // newRequestFn creates a request function for API namespaces.
 func (c *client) newRequestFn() api.RequestFn {
-	return func(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
+	return func(ctx context.Context, method string, params any) (json.RawMessage, error) {
 		paramsJSON, err := json.Marshal(params)
 		if err != nil {
 			return nil, err

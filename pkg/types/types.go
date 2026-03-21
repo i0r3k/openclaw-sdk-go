@@ -46,7 +46,7 @@ const (
 // Events are emitted by various components and delivered to subscribers.
 type Event struct {
 	Type      EventType
-	Payload   interface{}
+	Payload   any
 	Err       error
 	Timestamp time.Time
 }

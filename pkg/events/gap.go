@@ -164,8 +164,7 @@ func (gd *GapDetector) Reset() {
 	gd.mu.Lock()
 	defer gd.mu.Unlock()
 	gd.lastSequence = 0
-	gd.gaps = nil
-	gd.gaps = make([]GapInfo, 0)
+	gd.gaps = gd.gaps[:0]
 }
 
 // getTimeNow returns current Unix timestamp in milliseconds.
