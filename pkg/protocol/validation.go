@@ -6,7 +6,9 @@
 package protocol
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
 )
 
@@ -84,4 +86,31 @@ func (v *Validator) ValidateEventFrame(frame *EventFrame) error {
 		return &ValidationError{Field: "Event", Message: "is required"}
 	}
 	return nil
+}
+
+// ValidatePayloadSize validates that the serialized frame size does not exceed maxPayload.
+func (v *Validator) ValidatePayloadSize(frame *RequestFrame, maxPayload int64) error {
+	if frame == nil {
+		return errors.New("frame is nil")
+	}
+	data, err := json.Marshal(frame)
+	if err != nil {
+		return &ValidationError{Field: "Payload", Message: "failed to serialize: " + err.Error()}
+	}
+	size := int64(len(data))
+	if size > maxPayload {
+		return &ValidationError{Field: "Payload", Message: "size " + formatBytes(size) + " exceeds limit " + formatBytes(maxPayload)}
+	}
+	return nil
+}
+
+// formatBytes formats byte size for error messages
+func formatBytes(n int64) string {
+	if n < 1024 {
+		return fmt.Sprintf("%dB", n)
+	}
+	if n < 1024*1024 {
+		return fmt.Sprintf("%dKB", n/1024)
+	}
+	return fmt.Sprintf("%dMB", n/(1024*1024))
 }

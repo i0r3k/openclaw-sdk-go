@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -169,6 +170,52 @@ func TestValidator_ValidateMethodName(t *testing.T) {
 				} else {
 					t.Errorf("expected invalid, got no error")
 				}
+			}
+		})
+	}
+}
+
+func TestValidator_ValidatePayloadSize(t *testing.T) {
+	v := NewValidator()
+
+	tests := []struct {
+		name       string
+		payloadLen int
+		maxPayload int64
+		wantErr    bool
+	}{
+		{"within limit", 100, 1048576, false},
+		{"exceeds limit", 200, 100, true},
+		{"large payload within limit", 1024 * 1024, 1048576 + 200, false}, // +200 for JSON overhead
+		{"large payload exceeds limit", 1048577, 1048576, true},
+		{"nil frame", 0, 100, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var frame *RequestFrame
+			if tt.payloadLen > 0 {
+				// Create valid JSON payload with specified length
+				payload := make([]byte, tt.payloadLen)
+				for i := range payload {
+					payload[i] = 'x'
+				}
+				params := make(map[string]any)
+				params["data"] = string(payload)
+				paramsBytes, _ := json.Marshal(params)
+
+				frame = &RequestFrame{
+					ID:     "test-id",
+					Method: "test.method",
+					Params: paramsBytes,
+				}
+			}
+			err := v.ValidatePayloadSize(frame, tt.maxPayload)
+			if tt.wantErr && err == nil {
+				t.Error("expected error but got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}

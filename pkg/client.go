@@ -529,6 +529,27 @@ func (c *client) SendRequest(ctx context.Context, req *protocol.RequestFrame) (*
 		return nil, NewConnectionError("NOT_CONNECTED", "not connected", false, nil)
 	}
 
+	// Validate payload size against server policy
+	if c.policyManager != nil && c.policyManager.HasPolicy() {
+		data, err := json.Marshal(req)
+		if err != nil {
+			return nil, NewProtocolError(string(types.ProtocolErrFrameTooLarge), "failed to marshal request", false, nil)
+		}
+		maxPayload := c.policyManager.GetMaxPayload()
+		if int64(len(data)) > maxPayload {
+			return nil, NewProtocolError(
+				string(types.ProtocolErrFrameTooLarge),
+				fmt.Sprintf("request payload size %d exceeds server limit %d", len(data), maxPayload),
+				false,
+				nil,
+			)
+		}
+		sendFunc := func(r *protocol.RequestFrame) error {
+			return c.managers.connection.Transport().Send(data)
+		}
+		return c.managers.request.SendRequest(ctx, req, sendFunc)
+	}
+
 	sendFunc := func(r *protocol.RequestFrame) error {
 		data, err := json.Marshal(r)
 		if err != nil {
