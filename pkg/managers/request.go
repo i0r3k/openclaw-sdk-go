@@ -74,8 +74,10 @@ func (rm *RequestManager) SendRequest(ctx context.Context, req *protocol.Request
 			cancel()
 			delete(rm.timeouts, req.ID)
 		}
-		rm.mu.Unlock()
+		// Close channel while holding lock to prevent race with HandleResponse
+		// Channel close is safe - only reader (HandleResponse) can be affected
 		close(respCh)
+		rm.mu.Unlock()
 	}
 	defer cleanup()
 

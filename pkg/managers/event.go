@@ -112,10 +112,17 @@ func (em *EventManager) Start() {
 // Panics in handlers are recovered and logged to continue processing other handlers.
 func (em *EventManager) dispatch(event types.Event) {
 	em.mu.RLock()
-	handlerMap := em.handlers[event.Type]
+	// Copy handlers to avoid race: we must not hold lock while iterating handlers
+	var handlers []types.EventHandler
+	if handlerMap := em.handlers[event.Type]; handlerMap != nil {
+		handlers = make([]types.EventHandler, 0, len(handlerMap))
+		for _, handler := range handlerMap {
+			handlers = append(handlers, handler)
+		}
+	}
 	em.mu.RUnlock()
 
-	for _, handler := range handlerMap {
+	for _, handler := range handlers {
 		if handler != nil {
 			func() {
 				defer func() {

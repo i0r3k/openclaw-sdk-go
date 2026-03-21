@@ -3,6 +3,7 @@ package managers
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -156,7 +157,7 @@ func TestEventManager_PanicRecovery(t *testing.T) {
 	ctx := context.Background()
 	em := NewEventManager(ctx, 10)
 
-	goodHandlerCalled := false
+	var goodHandlerCalled atomic.Bool
 
 	// Subscribe a handler that panics
 	em.Subscribe(types.EventConnect, func(e types.Event) {
@@ -164,7 +165,7 @@ func TestEventManager_PanicRecovery(t *testing.T) {
 	})
 	// Subscribe a handler that should still be called
 	em.Subscribe(types.EventConnect, func(e types.Event) {
-		goodHandlerCalled = true
+		goodHandlerCalled.Store(true)
 	})
 
 	em.Start()
@@ -173,7 +174,7 @@ func TestEventManager_PanicRecovery(t *testing.T) {
 	timeout := time.After(100 * time.Millisecond)
 	done := make(chan struct{})
 	go func() {
-		for !goodHandlerCalled {
+		for !goodHandlerCalled.Load() {
 			time.Sleep(10 * time.Millisecond)
 		}
 		close(done)
