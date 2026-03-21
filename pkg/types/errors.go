@@ -342,23 +342,12 @@ func IsProtocolError(err error) bool {
 	return errors.As(err, &e)
 }
 
-// IsRequestError checks if the error is a RequestError (including TimeoutError, CancelledError, AbortError).
+// IsRequestError checks if the error is a RequestError.
+// TimeoutError, CancelledError, and AbortError embed RequestError,
+// so errors.As already matches them through the embedding chain.
 func IsRequestError(err error) bool {
 	var e *RequestError
-	if errors.As(err, &e) {
-		return true
-	}
-	// Also check TimeoutError, CancelledError, AbortError which embed RequestError
-	var te *TimeoutError
-	if errors.As(err, &te) {
-		return true
-	}
-	var ce *CancelledError
-	if errors.As(err, &ce) {
-		return true
-	}
-	var ae *AbortError
-	return errors.As(err, &ae)
+	return errors.As(err, &e)
 }
 
 // IsGatewayError checks if the error is a GatewayError.
@@ -410,6 +399,6 @@ func (e *ProtocolError) Unwrap() error   { return e.BaseError }
 func (e *RequestError) Unwrap() error    { return e.BaseError }
 func (e *GatewayError) Unwrap() error    { return e.BaseError }
 func (e *ReconnectError) Unwrap() error  { return e.BaseError }
-func (e *TimeoutError) Unwrap() error    { return e.BaseError }
-func (e *CancelledError) Unwrap() error  { return e.BaseError }
-func (e *AbortError) Unwrap() error      { return e.BaseError }
+func (e *TimeoutError) Unwrap() error    { return e.RequestError }
+func (e *CancelledError) Unwrap() error  { return e.RequestError }
+func (e *AbortError) Unwrap() error      { return e.RequestError }
