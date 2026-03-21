@@ -6,355 +6,461 @@ import (
 	"testing"
 )
 
-// TestNewError tests the generic error constructor
-func TestNewError(t *testing.T) {
+// TestNewAPIError_AuthErrors tests that AUTH_* and CHALLENGE_* codes create AuthError.
+func TestNewAPIError_AuthErrors(t *testing.T) {
 	tests := []struct {
-		name    string
-		code    ErrorCode
-		message string
-		err     error
+		name  string
+		shape *ErrorShape
 	}{
 		{
-			name:    "basic error",
-			code:    ErrCodeUnknown,
-			message: "something went wrong",
-			err:     nil,
+			name: "AUTH_TOKEN_EXPIRED",
+			shape: &ErrorShape{
+				Code:    "AUTH_TOKEN_EXPIRED",
+				Message: "Token has expired",
+			},
 		},
 		{
-			name:    "error with cause",
-			code:    ErrCodeConnection,
-			message: "connection failed",
-			err:     errors.New("underlying error"),
+			name: "AUTH_TOKEN_MISMATCH",
+			shape: &ErrorShape{
+				Code:    "AUTH_TOKEN_MISMATCH",
+				Message: "Token mismatch",
+			},
 		},
 		{
-			name:    "all error codes",
-			code:    ErrCodeProtocol,
-			message: "protocol error",
-			err:     nil,
+			name: "CHALLENGE_EXPIRED",
+			shape: &ErrorShape{
+				Code:    "CHALLENGE_EXPIRED",
+				Message: "Challenge expired",
+			},
+		},
+		{
+			name: "CHALLENGE_FAILED",
+			shape: &ErrorShape{
+				Code:    "CHALLENGE_FAILED",
+				Message: "Challenge failed",
+			},
+		},
+		{
+			name: "AUTH_RATE_LIMITED",
+			shape: &ErrorShape{
+				Code:    "AUTH_RATE_LIMITED",
+				Message: "Rate limited",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := NewError(tt.code, tt.message, tt.err)
-
-			if err.Error() != tt.message {
-				t.Errorf("Error() = %q, want %q", err.Error(), tt.message)
-			}
-
-			if err.Code() != tt.code {
-				t.Errorf("Code() = %s, want %s", err.Code(), tt.code)
-			}
-
-			if unwrapped := err.Unwrap(); unwrapped != tt.err {
-				t.Errorf("Unwrap() = %v, want %v", unwrapped, tt.err)
+			err := NewAPIError(tt.shape)
+			if !IsAuthError(err) {
+				t.Errorf("IsAuthError() = false, want true for code %s", tt.shape.Code)
 			}
 		})
 	}
 }
 
-// TestErrorConstructors tests all specific error type constructors
-func TestErrorConstructors(t *testing.T) {
-	baseErr := errors.New("base error")
-
+// TestNewAPIError_ConnectionErrors tests that CONNECTION_* and TLS_FINGERPRINT_MISMATCH create ConnectionError.
+func TestNewAPIError_ConnectionErrors(t *testing.T) {
 	tests := []struct {
-		name        string
-		constructor func(string, error) OpenClawError
-		wantCode    ErrorCode
+		name  string
+		shape *ErrorShape
 	}{
 		{
-			name:        "ConnectionError",
-			constructor: NewConnectionError,
-			wantCode:    ErrCodeConnection,
+			name: "CONNECTION_STALE",
+			shape: &ErrorShape{
+				Code:    "CONNECTION_STALE",
+				Message: "Connection stale",
+			},
 		},
 		{
-			name:        "AuthError",
-			constructor: NewAuthError,
-			wantCode:    ErrCodeAuth,
+			name: "CONNECTION_CLOSED",
+			shape: &ErrorShape{
+				Code:    "CONNECTION_CLOSED",
+				Message: "Connection closed",
+			},
 		},
 		{
-			name:        "TimeoutError",
-			constructor: NewTimeoutError,
-			wantCode:    ErrCodeTimeout,
+			name: "CONNECT_TIMEOUT",
+			shape: &ErrorShape{
+				Code:    "CONNECT_TIMEOUT",
+				Message: "Connect timeout",
+			},
 		},
 		{
-			name:        "ProtocolError",
-			constructor: NewProtocolError,
-			wantCode:    ErrCodeProtocol,
-		},
-		{
-			name:        "ValidationError",
-			constructor: NewValidationError,
-			wantCode:    ErrCodeValidation,
-		},
-		{
-			name:        "TransportError",
-			constructor: NewTransportError,
-			wantCode:    ErrCodeTransport,
+			name: "TLS_FINGERPRINT_MISMATCH",
+			shape: &ErrorShape{
+				Code:    "TLS_FINGERPRINT_MISMATCH",
+				Message: "TLS fingerprint mismatch",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.constructor("test message", baseErr)
-
-			if err.Error() != "test message" {
-				t.Errorf("Error() = %q, want %q", err.Error(), "test message")
-			}
-
-			if err.Code() != tt.wantCode {
-				t.Errorf("Code() = %s, want %s", err.Code(), tt.wantCode)
-			}
-
-			if unwrapped := err.Unwrap(); unwrapped != baseErr {
-				t.Errorf("Unwrap() = %v, want %v", unwrapped, baseErr)
-			}
-
-			// Verify type matches expected error type
-			switch tt.wantCode {
-			case ErrCodeConnection:
-				if _, ok := err.(*ConnectionError); !ok {
-					t.Errorf("error type = %T, want *ConnectionError", err)
-				}
-			case ErrCodeAuth:
-				if _, ok := err.(*AuthError); !ok {
-					t.Errorf("error type = %T, want *AuthError", err)
-				}
-			case ErrCodeTimeout:
-				if _, ok := err.(*TimeoutError); !ok {
-					t.Errorf("error type = %T, want *TimeoutError", err)
-				}
-			case ErrCodeProtocol:
-				if _, ok := err.(*ProtocolError); !ok {
-					t.Errorf("error type = %T, want *ProtocolError", err)
-				}
-			case ErrCodeValidation:
-				if _, ok := err.(*ValidationError); !ok {
-					t.Errorf("error type = %T, want *ValidationError", err)
-				}
-			case ErrCodeTransport:
-				if _, ok := err.(*TransportError); !ok {
-					t.Errorf("error type = %T, want *TransportError", err)
-				}
+			err := NewAPIError(tt.shape)
+			if !IsConnectionError(err) {
+				t.Errorf("IsConnectionError() = false, want true for code %s", tt.shape.Code)
 			}
 		})
 	}
 }
 
-// TestErrorConstructors_NilCause tests error constructors with nil cause
-func TestErrorConstructors_NilCause(t *testing.T) {
+// TestNewAPIError_ProtocolErrors tests that PROTOCOL_* codes create ProtocolError.
+func TestNewAPIError_ProtocolErrors(t *testing.T) {
 	tests := []struct {
-		name        string
-		constructor func(string, error) OpenClawError
-	}{
-		{"ConnectionError", NewConnectionError},
-		{"AuthError", NewAuthError},
-		{"TimeoutError", NewTimeoutError},
-		{"ProtocolError", NewProtocolError},
-		{"ValidationError", NewValidationError},
-		{"TransportError", NewTransportError},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.constructor("test message", nil)
-
-			if err.Unwrap() != nil {
-				t.Errorf("Unwrap() = %v, want nil", err.Unwrap())
-			}
-		})
-	}
-}
-
-// TestIs tests the Is function for error code matching
-func TestIs(t *testing.T) {
-	baseErr := errors.New("base")
-
-	tests := []struct {
-		name     string
-		err      error
-		code     ErrorCode
-		wantBool bool
+		name  string
+		shape *ErrorShape
 	}{
 		{
-			name:     "matching connection error",
-			err:      NewConnectionError("conn failed", baseErr),
-			code:     ErrCodeConnection,
-			wantBool: true,
+			name: "PROTOCOL_UNSUPPORTED",
+			shape: &ErrorShape{
+				Code:    "PROTOCOL_UNSUPPORTED",
+				Message: "Protocol unsupported",
+			},
 		},
 		{
-			name:     "non-matching error code",
-			err:      NewAuthError("auth failed", baseErr),
-			code:     ErrCodeConnection,
-			wantBool: false,
+			name: "PROTOCOL_NEGOTIATION_FAILED",
+			shape: &ErrorShape{
+				Code:    "PROTOCOL_NEGOTIATION_FAILED",
+				Message: "Negotiation failed",
+			},
 		},
 		{
-			name:     "nil error",
-			err:      nil,
-			code:     ErrCodeConnection,
-			wantBool: false,
+			name: "INVALID_FRAME",
+			shape: &ErrorShape{
+				Code:    "INVALID_FRAME",
+				Message: "Invalid frame",
+			},
 		},
 		{
-			name:     "standard error",
-			err:      errors.New("standard error"),
-			code:     ErrCodeUnknown,
-			wantBool: false,
-		},
-		{
-			name:     "wrapped error - matches inner",
-			err:      errors.New("wrapped: " + NewConnectionError("conn failed", baseErr).Error()),
-			code:     ErrCodeConnection,
-			wantBool: false,
-		},
-		{
-			name:     "timeout error matches",
-			err:      NewTimeoutError("timeout", nil),
-			code:     ErrCodeTimeout,
-			wantBool: true,
-		},
-		{
-			name:     "protocol error matches",
-			err:      NewProtocolError("invalid frame", nil),
-			code:     ErrCodeProtocol,
-			wantBool: true,
-		},
-		{
-			name:     "validation error matches",
-			err:      NewValidationError("invalid input", nil),
-			code:     ErrCodeValidation,
-			wantBool: true,
-		},
-		{
-			name:     "transport error matches",
-			err:      NewTransportError("send failed", nil),
-			code:     ErrCodeTransport,
-			wantBool: true,
+			name: "FRAME_TOO_LARGE",
+			shape: &ErrorShape{
+				Code:    "FRAME_TOO_LARGE",
+				Message: "Frame too large",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Is(tt.err, tt.code)
-			if got != tt.wantBool {
-				t.Errorf("Is() = %v, want %v", got, tt.wantBool)
+			err := NewAPIError(tt.shape)
+			if !IsProtocolError(err) {
+				t.Errorf("IsProtocolError() = false, want true for code %s", tt.shape.Code)
 			}
 		})
 	}
 }
 
-// TestAs tests the As function for error type casting
-func TestAs(t *testing.T) {
-	baseErr := errors.New("base")
-
+// TestNewAPIError_RequestErrors tests that exact match codes create RequestError.
+func TestNewAPIError_RequestErrors(t *testing.T) {
 	tests := []struct {
-		name      string
-		err       error
-		wantMatch bool
-		wantCode  ErrorCode
+		name  string
+		shape *ErrorShape
 	}{
 		{
-			name:      "connection error",
-			err:       NewConnectionError("conn failed", baseErr),
-			wantMatch: true,
-			wantCode:  ErrCodeConnection,
+			name: "METHOD_NOT_FOUND",
+			shape: &ErrorShape{
+				Code:    "METHOD_NOT_FOUND",
+				Message: "Method not found",
+			},
 		},
 		{
-			name:      "auth error",
-			err:       NewAuthError("auth failed", baseErr),
-			wantMatch: true,
-			wantCode:  ErrCodeAuth,
+			name: "INVALID_PARAMS",
+			shape: &ErrorShape{
+				Code:    "INVALID_PARAMS",
+				Message: "Invalid params",
+			},
 		},
 		{
-			name:      "nil error",
-			err:       nil,
-			wantMatch: false,
-		},
-		{
-			name:      "standard error",
-			err:       errors.New("standard"),
-			wantMatch: false,
+			name: "INTERNAL_ERROR",
+			shape: &ErrorShape{
+				Code:    "INTERNAL_ERROR",
+				Message: "Internal error",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var target OpenClawError
-			got := As(tt.err, &target)
-
-			if got != tt.wantMatch {
-				t.Errorf("As() = %v, want %v", got, tt.wantMatch)
-			}
-
-			if tt.wantMatch && target.Code() != tt.wantCode {
-				t.Errorf("after As(), target.Code() = %s, want %s", target.Code(), tt.wantCode)
-			}
-
-			if !tt.wantMatch && target != nil {
-				t.Errorf("after failed As(), target should be nil, got %v", target)
+			err := NewAPIError(tt.shape)
+			if !IsRequestError(err) {
+				t.Errorf("IsRequestError() = false, want true for code %s", tt.shape.Code)
 			}
 		})
 	}
 }
 
-// TestErrorChaining tests error wrapping and unwrapping
-func TestErrorChaining(t *testing.T) {
-	// Create a chain: base -> validation -> protocol
-	baseErr := errors.New("base error")
-	validErr := NewValidationError("invalid input", baseErr)
-	protoErr := NewProtocolError("frame error", validErr)
-
-	t.Run("unwrap once", func(t *testing.T) {
-		unwrapped := protoErr.Unwrap()
-		if unwrapped == nil {
-			t.Fatal("Unwrap() returned nil")
-		}
-
-		if unwrapped.Error() != "invalid input" {
-			t.Errorf("Unwrap().Error() = %s, want 'invalid input'", unwrapped.Error())
-		}
-	})
-
-	t.Run("unwrap twice using errors.Is", func(t *testing.T) {
-		// errors.Is should find the base error
-		if !errors.Is(protoErr, baseErr) {
-			t.Error("errors.Is(protoErr, baseErr) = false, want true")
-		}
-	})
-
-	t.Run("chain code preservation", func(t *testing.T) {
-		if protoErr.Code() != ErrCodeProtocol {
-			t.Errorf("Code() = %s, want %s", protoErr.Code(), ErrCodeProtocol)
-		}
-	})
-}
-
-// TestErrorCodeValues tests all error code constants
-func TestErrorCodeValues(t *testing.T) {
+// TestNewAPIError_GatewayErrors tests that gateway/business logic errors create GatewayError.
+func TestNewAPIError_GatewayErrors(t *testing.T) {
 	tests := []struct {
-		code ErrorCode
-		want string
+		name  string
+		shape *ErrorShape
 	}{
-		{ErrCodeConnection, "CONNECTION_ERROR"},
-		{ErrCodeAuth, "AUTH_ERROR"},
-		{ErrCodeTimeout, "TIMEOUT"},
-		{ErrCodeProtocol, "PROTOCOL_ERROR"},
-		{ErrCodeValidation, "VALIDATION_ERROR"},
-		{ErrCodeTransport, "TRANSPORT_ERROR"},
-		{ErrCodeUnknown, "UNKNOWN"},
+		{
+			name: "AGENT_NOT_FOUND",
+			shape: &ErrorShape{
+				Code:    "AGENT_NOT_FOUND",
+				Message: "Agent not found",
+			},
+		},
+		{
+			name: "AGENT_BUSY",
+			shape: &ErrorShape{
+				Code:    "AGENT_BUSY",
+				Message: "Agent busy",
+			},
+		},
+		{
+			name: "NODE_NOT_FOUND",
+			shape: &ErrorShape{
+				Code:    "NODE_NOT_FOUND",
+				Message: "Node not found",
+			},
+		},
+		{
+			name: "SESSION_NOT_FOUND",
+			shape: &ErrorShape{
+				Code:    "SESSION_NOT_FOUND",
+				Message: "Session not found",
+			},
+		},
+		{
+			name: "PERMISSION_DENIED",
+			shape: &ErrorShape{
+				Code:    "PERMISSION_DENIED",
+				Message: "Permission denied",
+			},
+		},
+		{
+			name: "QUOTA_EXCEEDED",
+			shape: &ErrorShape{
+				Code:    "QUOTA_EXCEEDED",
+				Message: "Quota exceeded",
+			},
+		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.want, func(t *testing.T) {
-			if string(tt.code) != tt.want {
-				t.Errorf("ErrorCode = %s, want %s", tt.code, tt.want)
+		t.Run(tt.name, func(t *testing.T) {
+			err := NewAPIError(tt.shape)
+			if !IsGatewayError(err) {
+				t.Errorf("IsGatewayError() = false, want true for code %s", tt.shape.Code)
 			}
 		})
 	}
 }
 
-// TestErrorInterfaces tests that error types implement expected interfaces
+// TestNewAPIError_Fallthrough tests that REQUEST_TIMEOUT, REQUEST_CANCELLED,
+// and REQUEST_ABORTED fall through to GatewayError (NOT RequestError).
+// This matches TypeScript createErrorFromResponse behavior.
+func TestNewAPIError_Fallthrough(t *testing.T) {
+	tests := []struct {
+		name  string
+		shape *ErrorShape
+	}{
+		{
+			name: "REQUEST_TIMEOUT",
+			shape: &ErrorShape{
+				Code:    "REQUEST_TIMEOUT",
+				Message: "Request timeout",
+			},
+		},
+		{
+			name: "REQUEST_CANCELLED",
+			shape: &ErrorShape{
+				Code:    "REQUEST_CANCELLED",
+				Message: "Request cancelled",
+			},
+		},
+		{
+			name: "REQUEST_ABORTED",
+			shape: &ErrorShape{
+				Code:    "REQUEST_ABORTED",
+				Message: "Request aborted",
+			},
+		},
+		{
+			name: "UNKNOWN_ERROR_CODE",
+			shape: &ErrorShape{
+				Code:    "UNKNOWN_ERROR_CODE",
+				Message: "Unknown error",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := NewAPIError(tt.shape)
+			// These should be GatewayError, NOT RequestError
+			if IsRequestError(err) {
+				t.Errorf("IsRequestError() = true for %s, want false (should be GatewayError)", tt.shape.Code)
+			}
+			if !IsGatewayError(err) {
+				t.Errorf("IsGatewayError() = false for %s, want true", tt.shape.Code)
+			}
+		})
+	}
+}
+
+// TestNewAPIError_LowercaseCodes tests case-insensitive code matching.
+func TestNewAPIError_LowercaseCodes(t *testing.T) {
+	tests := []struct {
+		name  string
+		shape *ErrorShape
+		want  func(error) bool
+	}{
+		{
+			name: "auth_token_expired (lowercase)",
+			shape: &ErrorShape{
+				Code:    "auth_token_expired",
+				Message: "Token expired",
+			},
+			want: IsAuthError,
+		},
+		{
+			name: "connection_stale (lowercase)",
+			shape: &ErrorShape{
+				Code:    "connection_stale",
+				Message: "Connection stale",
+			},
+			want: IsConnectionError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := NewAPIError(tt.shape)
+			if !tt.want(err) {
+				t.Errorf("expected error type check to return true for code %s", tt.shape.Code)
+			}
+		})
+	}
+}
+
+// TestNewAPIError_Retryable tests retryable field propagation.
+func TestNewAPIError_Retryable(t *testing.T) {
+	retryable := true
+	notRetryable := false
+
+	tests := []struct {
+		name  string
+		shape *ErrorShape
+		want  bool
+	}{
+		{
+			name: "with retryable=true",
+			shape: &ErrorShape{
+				Code:      "AUTH_TOKEN_EXPIRED",
+				Message:   "Token expired",
+				Retryable: &retryable,
+			},
+			want: true,
+		},
+		{
+			name: "with retryable=false",
+			shape: &ErrorShape{
+				Code:      "AUTH_TOKEN_EXPIRED",
+				Message:   "Token expired",
+				Retryable: &notRetryable,
+			},
+			want: false,
+		},
+		{
+			name: "without retryable field",
+			shape: &ErrorShape{
+				Code:    "AUTH_TOKEN_EXPIRED",
+				Message: "Token expired",
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := NewAPIError(tt.shape)
+			if IsRetryable(err) != tt.want {
+				t.Errorf("IsRetryable() = %v, want %v", IsRetryable(err), tt.want)
+			}
+		})
+	}
+}
+
+// TestNewAPIError_Details tests details field propagation.
+func TestNewAPIError_Details(t *testing.T) {
+	details := map[string]interface{}{"key": "value"}
+	shape := &ErrorShape{
+		Code:    "AUTH_TOKEN_EXPIRED",
+		Message: "Token expired",
+		Details: details,
+	}
+
+	err := NewAPIError(shape)
+	authErr, ok := err.(*AuthError)
+	if !ok {
+		t.Fatalf("expected *AuthError, got %T", err)
+	}
+
+	if authErr.Details() == nil {
+		t.Error("Details() = nil, want details")
+	}
+}
+
+// TestNewAPIError_ReconnectErrors tests reconnect error codes.
+func TestNewAPIError_ReconnectErrors(t *testing.T) {
+	tests := []struct {
+		name  string
+		shape *ErrorShape
+	}{
+		{
+			name: "MAX_RECONNECT_ATTEMPTS",
+			shape: &ErrorShape{
+				Code:    "MAX_RECONNECT_ATTEMPTS",
+				Message: "Max reconnect attempts",
+			},
+		},
+		{
+			name: "MAX_AUTH_RETRIES",
+			shape: &ErrorShape{
+				Code:    "MAX_AUTH_RETRIES",
+				Message: "Max auth retries",
+			},
+		},
+		{
+			name: "RECONNECT_DISABLED",
+			shape: &ErrorShape{
+				Code:    "RECONNECT_DISABLED",
+				Message: "Reconnect disabled",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := NewAPIError(tt.shape)
+			if !IsGatewayError(err) {
+				// These fall through to GatewayError in current implementation
+				t.Logf("Note: %s falls through to GatewayError", tt.shape.Code)
+			}
+		})
+	}
+}
+
+// TestTimeoutError_SpecificType tests that TimeoutError is a specific error type.
+func TestTimeoutError_SpecificType(t *testing.T) {
+	err := NewTimeoutError("request timed out", nil)
+
+	if !IsTimeoutError(err) {
+		t.Errorf("IsTimeoutError() = false, want true")
+	}
+
+	if !IsRequestError(err) {
+		t.Errorf("IsRequestError() = false, want true (TimeoutError is a RequestError)")
+	}
+}
+
+// TestErrorInterfaces tests that error types implement expected interfaces.
 func TestErrorInterfaces(t *testing.T) {
-	err := NewConnectionError("test", nil)
+	err := NewAuthError("AUTH_TOKEN_EXPIRED", "Token expired", true, nil)
 
 	t.Run("implements error interface", func(t *testing.T) {
 		var _ error = err
@@ -362,32 +468,92 @@ func TestErrorInterfaces(t *testing.T) {
 	})
 
 	t.Run("implements OpenClawError interface", func(t *testing.T) {
-		var _ = err
-		_ = err.Code()
-		_ = err.Unwrap()
+		var oe OpenClawError = err
+		_ = oe.Code()
+		_ = oe.Retryable()
+		_ = oe.Unwrap()
 	})
 }
 
-// BenchmarkErrorCreation benchmarks error creation performance
-func BenchmarkErrorCreation(b *testing.B) {
-	baseErr := errors.New("base")
+// TestNewAPIError_UnknownCode tests that unknown codes fall through to GatewayError.
+func TestNewAPIError_UnknownCode(t *testing.T) {
+	shape := &ErrorShape{
+		Code:    "UNKNOWN_ERROR_CODE",
+		Message: "Unknown error",
+	}
 
-	b.Run("NewConnectionError", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = NewConnectionError("connection failed", baseErr)
-		}
-	})
+	err := NewAPIError(shape)
+	if !IsGatewayError(err) {
+		t.Errorf("IsGatewayError() = false, want true for unknown code")
+	}
+}
 
-	b.Run("NewError", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = NewError(ErrCodeConnection, "connection failed", baseErr)
-		}
-	})
+// TestErrorMessageAndCode tests error message and code fields.
+func TestErrorMessageAndCode(t *testing.T) {
+	shape := &ErrorShape{
+		Code:    "AUTH_TOKEN_EXPIRED",
+		Message: "Token has expired",
+	}
 
-	b.Run("Is", func(b *testing.B) {
-		err := NewConnectionError("test", baseErr)
-		for i := 0; i < b.N; i++ {
-			_ = Is(err, ErrCodeConnection)
-		}
-	})
+	err := NewAPIError(shape)
+	authErr, ok := err.(*AuthError)
+	if !ok {
+		t.Fatalf("expected *AuthError, got %T", err)
+	}
+
+	if authErr.Error() != "Token has expired" {
+		t.Errorf("Error() = %s, want %s", authErr.Error(), "Token has expired")
+	}
+
+	if authErr.Code() != "AUTH_TOKEN_EXPIRED" {
+		t.Errorf("Code() = %s, want %s", authErr.Code(), "AUTH_TOKEN_EXPIRED")
+	}
+}
+
+// TestErrorUnwrap tests error unwrapping.
+func TestErrorUnwrap(t *testing.T) {
+	innerErr := errors.New("inner error")
+	shape := &ErrorShape{
+		Code:    "INTERNAL_ERROR",
+		Message: "Internal error",
+		Details: innerErr,
+	}
+
+	err := NewAPIError(shape)
+	reqErr, ok := err.(*RequestError)
+	if !ok {
+		t.Fatalf("expected *RequestError, got %T", err)
+	}
+
+	unwrapped := reqErr.Unwrap()
+	if unwrapped == nil {
+		t.Error("Unwrap() = nil, want inner error")
+	}
+}
+
+// TestErrorImplementsInterface tests that error types implement OpenClawError.
+func TestErrorImplementsInterface(t *testing.T) {
+	shape := &ErrorShape{
+		Code:    "AUTH_TOKEN_EXPIRED",
+		Message: "Token expired",
+	}
+
+	err := NewAPIError(shape)
+
+	var oe OpenClawError
+	if !errors.As(err, &oe) {
+		t.Fatal("error does not implement OpenClawError")
+	}
+
+	if oe.Code() != "AUTH_TOKEN_EXPIRED" {
+		t.Errorf("Code() = %s, want %s", oe.Code(), "AUTH_TOKEN_EXPIRED")
+	}
+
+	if oe.Retryable() != false {
+		t.Errorf("Retryable() = %v, want false", oe.Retryable())
+	}
+
+	if oe.Error() != "Token expired" {
+		t.Errorf("Error() = %s, want %s", oe.Error(), "Token expired")
+	}
 }

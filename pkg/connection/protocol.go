@@ -1,10 +1,4 @@
-// Package connection provides connection management components for OpenClaw SDK.
-//
-// This package provides:
-//   - ConnectionStateMachine: State machine for managing connection lifecycle
-//   - PolicyManager: Connection policy configuration
-//   - ProtocolNegotiator: Protocol version negotiation
-//   - TLS validation: Certificate and configuration validation
+// Package connection provides protocol negotiation for OpenClaw SDK.
 package connection
 
 import (
@@ -17,49 +11,117 @@ import (
 )
 
 // ProtocolNegotiator handles protocol version negotiation.
-// It compares client-supported versions with server-supported versions
-// to find a mutually compatible protocol version.
 type ProtocolNegotiator struct {
-	supportedVersions []string      // Protocol versions supported by the client
-	defaultTimeout    time.Duration // Default timeout for negotiation
+	versionRange      ProtocolVersionRange
+	negotiatedVersion *int
+	defaultTimeout    time.Duration
 }
 
-// NewProtocolNegotiator creates a new protocol negotiator.
-// If no supported versions are provided, defaults to "1.0".
-func NewProtocolNegotiator(supportedVersions []string) *ProtocolNegotiator {
-	if len(supportedVersions) == 0 {
-		supportedVersions = []string{"1.0"}
-	}
-	return &ProtocolNegotiator{
-		supportedVersions: supportedVersions,
+// NegotiatedProtocol represents the result of protocol negotiation.
+type NegotiatedProtocol struct {
+	Version int
+	Min     int
+	Max     int
+}
+
+// NewProtocolNegotiator creates a new ProtocolNegotiator.
+// If no versionRange is provided, defaults to {min: 3, max: 3}.
+func NewProtocolNegotiator(versionRangeVal ...ProtocolVersionRange) *ProtocolNegotiator {
+	p := &ProtocolNegotiator{
+		versionRange:      DefaultProtocolVersionRange(),
+		negotiatedVersion: nil,
 		defaultTimeout:    5 * time.Second,
 	}
+	if len(versionRangeVal) > 0 {
+		p.versionRange = versionRangeVal[0]
+	}
+	return p
+}
+
+// GetRange returns the protocol version versionRange.
+func (p *ProtocolNegotiator) GetRange() ProtocolVersionRange {
+	return p.versionRange
+}
+
+// GetNegotiatedVersion returns the negotiated version or nil if not yet negotiated.
+func (p *ProtocolNegotiator) GetNegotiatedVersion() *int {
+	return p.negotiatedVersion
+}
+
+// IsNegotiated returns true if negotiation has completed.
+func (p *ProtocolNegotiator) IsNegotiated() bool {
+	return p.negotiatedVersion != nil
 }
 
 // Negotiate performs protocol version negotiation with context support.
-// It finds the first matching version from client and server supported versions.
-// Returns the negotiated version or an error if no match is found or timeout occurs.
-func (p *ProtocolNegotiator) Negotiate(ctx context.Context, serverVersions []string) (string, error) {
-	// Create a timeout if context doesn't have one
-	ctx, cancel := context.WithTimeout(ctx, p.defaultTimeout)
-	defer cancel()
-
-	// Wait for context cancellation or check version match
+func (p *ProtocolNegotiator) Negotiate(ctx context.Context, helloOk *HelloOk) (*NegotiatedProtocol, error) {
 	select {
 	case <-ctx.Done():
-		return "", types.NewProtocolError("protocol negotiation timeout", ctx.Err())
+		return nil, types.NewProtocolError("PROTOCOL_NEGOTIATION_TIMEOUT", "protocol negotiation timeout", false, ctx.Err())
 	default:
-		// Check for matching versions
-		for _, clientVer := range p.supportedVersions {
-			if slices.Contains(serverVersions, clientVer) {
-				return clientVer, nil
-			}
-		}
-		// No match found
-		return "", types.NewProtocolError("no matching protocol version", nil)
 	}
+
+	serverVersion := helloOk.Protocol
+
+	// Check if server version is within our supported versionRange
+	if serverVersion < p.versionRange.Min || serverVersion > p.versionRange.Max {
+		return nil, types.NewProtocolError(
+			"PROTOCOL_NEGOTIATION_FAILED",
+			"protocol version out of versionRange",
+			false,
+			errors.New("protocol version out of supported versionRange"),
+		)
+	}
+
+	p.negotiatedVersion = &serverVersion
+
+	return &NegotiatedProtocol{
+		Version: serverVersion,
+		Min:     p.versionRange.Min,
+		Max:     p.versionRange.Max,
+	}, nil
 }
 
-// ErrNoMatchingProtocol is a sentinel error for protocol negotiation failures.
-// Use errors.Is() to check for this specific error.
-var ErrNoMatchingProtocol = errors.New("no matching protocol version")
+// Reset resets the negotiated version.
+func (p *ProtocolNegotiator) Reset() {
+	p.negotiatedVersion = nil
+}
+
+// NegotiateWithTimeout performs protocol negotiation with a timeout.
+func (p *ProtocolNegotiator) NegotiateWithTimeout(helloOk *HelloOk, timeout time.Duration) (*NegotiatedProtocol, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return p.Negotiate(ctx, helloOk)
+}
+
+// GetSupportedVersions returns the list of supported protocol versions.
+func (p *ProtocolNegotiator) GetSupportedVersions() []int {
+	versions := make([]int, 0, p.versionRange.Max-p.versionRange.Min+1)
+	for v := p.versionRange.Min; v <= p.versionRange.Max; v++ {
+		versions = append(versions, v)
+	}
+	return versions
+}
+
+// IsVersionSupported checks if a version is within the supported versionRange.
+func (p *ProtocolNegotiator) IsVersionSupported(version int) bool {
+	return version >= p.versionRange.Min && version <= p.versionRange.Max
+}
+
+// NegotiateWithServerVersions performs negotiation given server versions list.
+func (p *ProtocolNegotiator) NegotiateWithServerVersions(ctx context.Context, serverVersions []int) (string, error) {
+	select {
+	case <-ctx.Done():
+		return "", types.NewProtocolError("PROTOCOL_NEGOTIATION_TIMEOUT", "protocol negotiation timeout", false, ctx.Err())
+	default:
+	}
+
+	// Find first matching version
+	for _, clientVer := range p.GetSupportedVersions() {
+		if slices.Contains(serverVersions, clientVer) {
+			return string(rune('0' + clientVer)), nil
+		}
+	}
+
+	return "", types.NewProtocolError("PROTOCOL_NEGOTIATION_FAILED", "no matching protocol version", false, nil)
+}

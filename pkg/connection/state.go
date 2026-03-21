@@ -97,3 +97,17 @@ func (csm *ConnectionStateMachine) State() types.ConnectionState {
 func (csm *ConnectionStateMachine) Events() <-chan StateChangeEvent {
 	return csm.events
 }
+
+// Reset resets the state machine to the disconnected state.
+func (csm *ConnectionStateMachine) Reset() {
+	csm.mu.Lock()
+	defer csm.mu.Unlock()
+	csm.state = types.StateDisconnected
+}
+
+// IsReady returns true if the connection state is Connected or Authenticated.
+func (csm *ConnectionStateMachine) IsReady() bool {
+	csm.mu.RLock()
+	defer csm.mu.RUnlock()
+	return csm.state == types.StateConnected || csm.state == types.StateAuthenticated
+}

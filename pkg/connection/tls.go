@@ -12,11 +12,10 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"time"
-
-	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 )
 
 // ErrCertificateExpired represents certificate expiration errors.
@@ -78,21 +77,21 @@ func (v *TlsValidator) Validate() error {
 	// If using custom CA, verify it exists
 	if v.config.CAFile != "" {
 		if _, err := os.Stat(v.config.CAFile); os.IsNotExist(err) {
-			return types.NewValidationError("TLS CA file does not exist", ErrCANotFound)
+			return fmt.Errorf("TLS CA file does not exist: %w", ErrCANotFound)
 		}
 	}
 
 	// If using client cert, both cert and key must be present
 	if v.config.CertFile != "" || v.config.KeyFile != "" {
 		if v.config.CertFile == "" || v.config.KeyFile == "" {
-			return types.NewValidationError("both CertFile and KeyFile are required for client authentication", ErrInvalidTLSConfig)
+			return fmt.Errorf("both CertFile and KeyFile are required for client authentication: %w", ErrInvalidTLSConfig)
 		}
 		// Verify both files exist
 		if _, err := os.Stat(v.config.CertFile); os.IsNotExist(err) {
-			return types.NewValidationError("TLS certificate file does not exist", ErrCertNotFound)
+			return fmt.Errorf("TLS certificate file does not exist: %w", ErrCertNotFound)
 		}
 		if _, err := os.Stat(v.config.KeyFile); os.IsNotExist(err) {
-			return types.NewValidationError("TLS key file does not exist", ErrCertNotFound)
+			return fmt.Errorf("TLS key file does not exist: %w", ErrCertNotFound)
 		}
 	}
 
@@ -121,7 +120,7 @@ func (v *TlsValidator) GetTLSConfig() (*tls.Config, error) {
 	if v.config.CertFile != "" && v.config.KeyFile != "" {
 		cert, err := tls.LoadX509KeyPair(v.config.CertFile, v.config.KeyFile)
 		if err != nil {
-			return nil, types.NewTransportError("failed to load client certificate", err)
+			return nil, fmt.Errorf("failed to load client certificate: %w", err)
 		}
 		config.Certificates = []tls.Certificate{cert}
 	}
@@ -130,7 +129,7 @@ func (v *TlsValidator) GetTLSConfig() (*tls.Config, error) {
 	if v.config.CAFile != "" {
 		caCert, err := os.ReadFile(v.config.CAFile)
 		if err != nil {
-			return nil, types.NewTransportError("failed to read CA certificate", err)
+			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
 		}
 		caPool := x509.NewCertPool()
 		caPool.AppendCertsFromPEM(caCert)

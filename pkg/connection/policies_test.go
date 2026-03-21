@@ -1,44 +1,80 @@
-// pkg/openclaw/connection/policies_test.go
+// Package connection provides tests for policy management.
 package connection
 
 import (
 	"testing"
-	"time"
 )
 
-func TestPolicyManager_InfiniteReconnect(t *testing.T) {
-	pm := NewPolicyManager(0, 30*time.Second)
+func TestPolicyManager_SetPolicies(t *testing.T) {
+	pm := NewPolicyManager()
 
-	if !pm.ShouldReconnect(0) {
-		t.Error("expected ShouldReconnect(0) to return true for infinite retries")
+	policy := Policy{
+		MaxPayload:       2097152,
+		MaxBufferedBytes: 131072,
+		TickIntervalMs:   15000,
 	}
-	if !pm.ShouldReconnect(100) {
-		t.Error("expected ShouldReconnect(100) to return true for infinite retries")
+
+	pm.SetPolicies(policy)
+
+	if !pm.HasPolicy() {
+		t.Error("expected HasPolicy() to return true after SetPolicies")
+	}
+
+	if pm.GetMaxPayload() != 2097152 {
+		t.Errorf("expected 2097152, got %d", pm.GetMaxPayload())
+	}
+
+	if pm.GetMaxBufferedBytes() != 131072 {
+		t.Errorf("expected 131072, got %d", pm.GetMaxBufferedBytes())
+	}
+
+	if pm.GetTickIntervalMs() != 15000 {
+		t.Errorf("expected 15000, got %d", pm.GetTickIntervalMs())
 	}
 }
 
-func TestPolicyManager_LimitedReconnect(t *testing.T) {
-	pm := NewPolicyManager(3, 30*time.Second)
+func TestPolicyManager_DefaultPolicy(t *testing.T) {
+	pm := NewPolicyManager()
 
-	if !pm.ShouldReconnect(0) {
-		t.Error("expected ShouldReconnect(0) to return true")
+	// Default policy should not be marked as "set"
+	if pm.HasPolicy() {
+		t.Error("expected HasPolicy() to return false for default policy")
 	}
-	if !pm.ShouldReconnect(2) {
-		t.Error("expected ShouldReconnect(2) to return true")
+
+	// But getters should still return defaults
+	if pm.GetMaxPayload() != 1048576 {
+		t.Errorf("expected 1048576, got %d", pm.GetMaxPayload())
 	}
-	if pm.ShouldReconnect(3) {
-		t.Error("expected ShouldReconnect(3) to return false (attempt 3 == max)")
-	}
-	if pm.ShouldReconnect(10) {
-		t.Error("expected ShouldReconnect(10) to return false")
+
+	if pm.GetTickIntervalMs() != 30000 {
+		t.Errorf("expected 30000, got %d", pm.GetTickIntervalMs())
 	}
 }
 
-func TestPolicyManager_PingInterval(t *testing.T) {
-	pm := NewPolicyManager(0, 30*time.Second)
+func TestDefaultPolicy(t *testing.T) {
+	policy := DefaultPolicy()
 
-	interval := pm.PingInterval()
-	if interval != 30*time.Second {
-		t.Errorf("expected 30s, got %v", interval)
+	if policy.MaxPayload != 1048576 {
+		t.Errorf("expected 1048576, got %d", policy.MaxPayload)
+	}
+
+	if policy.MaxBufferedBytes != 65536 {
+		t.Errorf("expected 65536, got %d", policy.MaxBufferedBytes)
+	}
+
+	if policy.TickIntervalMs != 30000 {
+		t.Errorf("expected 30000, got %d", policy.TickIntervalMs)
+	}
+}
+
+func TestDefaultProtocolVersionRange(t *testing.T) {
+	rangeVal := DefaultProtocolVersionRange()
+
+	if rangeVal.Min != 3 {
+		t.Errorf("expected Min=3, got %d", rangeVal.Min)
+	}
+
+	if rangeVal.Max != 3 {
+		t.Errorf("expected Max=3, got %d", rangeVal.Max)
 	}
 }

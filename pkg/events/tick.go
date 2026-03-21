@@ -6,181 +6,151 @@
 package events
 
 import (
-	"context"
 	"sync"
 	"time"
 )
 
+const defaultStaleMultiplier = 2
+
 // TickMonitor monitors connection heartbeat.
 // It tracks tick events and detects when expected ticks are not received within the timeout.
 type TickMonitor struct {
-	interval  time.Duration      // Interval between tick events
-	timeout   time.Duration      // Timeout duration
-	ticker    *time.Ticker       // Ticker for periodic ticks
-	timer     *time.Timer        // Timer for timeout detection
-	tickCh    chan time.Time     // Channel for tick events
-	ctx       context.Context    // Context for lifecycle
-	cancel    context.CancelFunc // Cancel function
-	wg        sync.WaitGroup     // WaitGroup for goroutines
-	mu        sync.RWMutex       // Mutex for thread-safety
-	onTick    func(time.Time)    // Callback for tick events
-	onTimeout func()             // Callback for timeout events
-	running   bool               // Flag indicating if monitor is running
-	stopped   chan struct{}      // Channel to signal stop
-}
-
-// ValidationError represents validation failure for TickMonitor configuration.
-type ValidationError struct {
-	Field   string // Field name that failed validation
-	Message string // Validation error message
-}
-
-// Error returns the string representation of the validation error.
-func (e *ValidationError) Error() string {
-	return e.Field + ": " + e.Message
+	tickIntervalMs  int64        // Tick interval in milliseconds
+	staleMultiplier int          // Multiplier for stale threshold
+	lastTickTime    int64        // Last tick timestamp (in milliseconds)
+	staleDetected   bool         // Whether stale state has been detected
+	staleStartTime  *int64       // When stale state started
+	started         bool         // Whether monitoring is started
+	mu              sync.RWMutex // Mutex for thread-safety
+	onStale         func()       // Callback when connection becomes stale
+	onRecovered     func()       // Callback when connection recovers
 }
 
 // NewTickMonitor creates a new tick monitor with the specified interval and timeout.
-// Returns error if interval or timeout is zero or negative.
-func NewTickMonitor(interval time.Duration, timeout time.Duration) (*TickMonitor, error) {
-	if interval <= 0 {
-		return nil, &ValidationError{Field: "interval", Message: "must be positive"}
+// The timeout is derived from tickIntervalMs * staleMultiplier.
+func NewTickMonitor(tickIntervalMs int64, staleMultiplier int) *TickMonitor {
+	if staleMultiplier <= 0 {
+		staleMultiplier = defaultStaleMultiplier
 	}
-	if timeout <= 0 {
-		return nil, &ValidationError{Field: "timeout", Message: "must be positive"}
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
 	return &TickMonitor{
-		interval: interval,
-		timeout:  timeout,
-		ticker:   time.NewTicker(interval),
-		timer:    time.NewTimer(timeout),
-		tickCh:   make(chan time.Time, 1),
-		ctx:      ctx,
-		cancel:   cancel,
-		stopped:  make(chan struct{}),
-	}, nil
+		tickIntervalMs:  tickIntervalMs,
+		staleMultiplier: staleMultiplier,
+	}
 }
 
-// SetOnTick sets the callback function to be called when a tick is received.
-func (tm *TickMonitor) SetOnTick(f func(time.Time)) {
+// SetOnStale sets the callback function to be called when connection becomes stale.
+func (tm *TickMonitor) SetOnStale(f func()) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	tm.onTick = f
+	tm.onStale = f
 }
 
-// SetOnTimeout sets the callback function to be called when a timeout occurs.
-func (tm *TickMonitor) SetOnTimeout(f func()) {
+// SetOnRecovered sets the callback function to be called when connection recovers.
+func (tm *TickMonitor) SetOnRecovered(f func()) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
-	tm.onTimeout = f
+	tm.onRecovered = f
 }
 
-// Start begins the tick monitoring in a background goroutine.
+// Start begins the tick monitoring.
 func (tm *TickMonitor) Start() {
 	tm.mu.Lock()
-	if tm.running {
-		tm.mu.Unlock()
-		return
-	}
-	tm.running = true
-	tm.mu.Unlock()
-
-	tm.wg.Add(1)
-	go tm.run()
+	defer tm.mu.Unlock()
+	tm.started = true
 }
 
 // Stop stops the tick monitoring.
-// It is idempotent - calling multiple times is safe.
 func (tm *TickMonitor) Stop() {
 	tm.mu.Lock()
-	if !tm.running {
-		tm.mu.Unlock()
-		return
-	}
-	tm.running = false
-	// Mark as stopped to prevent double channel close
-	stopped := tm.stopped
-	tickCh := tm.tickCh
-	tm.stopped = nil
-	tm.tickCh = nil
-	tm.mu.Unlock()
+	defer tm.mu.Unlock()
+	tm.started = false
+}
 
-	tm.cancel()
+// RecordTick records an incoming tick with the given timestamp.
+// Timestamp should be in milliseconds.
+func (tm *TickMonitor) RecordTick(ts int64) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 
-	// Stop timer and ticker
-	if !tm.timer.Stop() {
-		// Drain timer channel if it fired
-		select {
-		case <-tm.timer.C:
-		default:
+	wasStale := tm.staleDetected
+	tm.lastTickTime = ts
+	tm.staleStartTime = nil
+
+	if wasStale {
+		// Only emit recovered if connection is genuinely healthy
+		if !tm.isStaleLocked() && tm.onRecovered != nil {
+			tm.onRecovered()
 		}
-	}
-	tm.ticker.Stop()
-
-	// Wait for goroutine to finish
-	tm.wg.Wait()
-
-	// Close channels only if they weren't already closed
-	// (protected by nil check since Stop is idempotent)
-	if stopped != nil {
-		close(stopped)
-	}
-	if tickCh != nil {
-		close(tickCh)
+		tm.staleDetected = false
 	}
 }
 
-// run is the main monitoring loop.
-// It listens for tick events and timeout events.
-func (tm *TickMonitor) run() {
-	defer tm.wg.Done()
-
-	var lastTick time.Time
-	for {
-		select {
-		case <-tm.ctx.Done():
-			return
-		case tick := <-tm.ticker.C:
-			lastTick = tick
-			select {
-			case tm.tickCh <- tick:
-			default:
-			}
-			// Call callback with lock
-			tm.mu.RLock()
-			onTick := tm.onTick
-			tm.mu.RUnlock()
-			if onTick != nil {
-				onTick(tick)
-			}
-		case <-tm.timer.C:
-			// Timer fired - timeout occurred
-			// Check if still running before resetting
-			tm.mu.RLock()
-			onTimeout := tm.onTimeout
-			running := tm.running
-			tm.mu.RUnlock()
-			if onTimeout != nil && !lastTick.IsZero() {
-				onTimeout()
-			}
-			// Reset timer for next timeout (only if still running)
-			if running && !lastTick.IsZero() {
-				tm.timer.Reset(tm.timeout)
-			}
-		}
+// isStaleLocked checks if the connection is stale. Caller must hold the lock.
+func (tm *TickMonitor) isStaleLocked() bool {
+	if !tm.started {
+		return false
 	}
+	if tm.lastTickTime == 0 {
+		return false
+	}
+	now := time.Now().UnixMilli()
+	threshold := tm.tickIntervalMs * int64(tm.staleMultiplier)
+	return now-tm.lastTickTime > threshold
 }
 
-// TickChannel returns the channel for receiving tick events.
-func (tm *TickMonitor) TickChannel() <-chan time.Time {
-	return tm.tickCh
+// IsStale returns true if no tick received within threshold.
+func (tm *TickMonitor) IsStale() bool {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	return tm.isStaleLocked()
+}
+
+// CheckStale checks staleness and fires stale event if newly detected.
+func (tm *TickMonitor) CheckStale() bool {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	stale := tm.isStaleLocked()
+	if stale && !tm.staleDetected {
+		tm.staleDetected = true
+		threshold := tm.tickIntervalMs * int64(tm.staleMultiplier)
+		startTime := tm.lastTickTime + threshold
+		tm.staleStartTime = &startTime
+		if tm.onStale != nil {
+			tm.onStale()
+		}
+	}
+	return stale
+}
+
+// GetTimeSinceLastTick returns milliseconds since last tick.
+func (tm *TickMonitor) GetTimeSinceLastTick() int64 {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	if !tm.started || tm.lastTickTime == 0 {
+		return 0
+	}
+	return time.Now().UnixMilli() - tm.lastTickTime
+}
+
+// GetStaleDuration returns milliseconds in stale state, 0 if not stale.
+func (tm *TickMonitor) GetStaleDuration() int64 {
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+	if !tm.isStaleLocked() {
+		return 0
+	}
+	if tm.staleStartTime == nil {
+		threshold := tm.tickIntervalMs * int64(tm.staleMultiplier)
+		startTime := tm.lastTickTime + threshold
+		tm.staleStartTime = &startTime
+	}
+	return time.Now().UnixMilli() - *tm.staleStartTime
 }
 
 // IsRunning returns whether the tick monitor is currently running.
 func (tm *TickMonitor) IsRunning() bool {
 	tm.mu.RLock()
 	defer tm.mu.RUnlock()
-	return tm.running
+	return tm.started
 }

@@ -1,47 +1,47 @@
-// Package connection provides connection management components for OpenClaw SDK.
-//
-// This package provides:
-//   - ConnectionStateMachine: State machine for managing connection lifecycle
-//   - PolicyManager: Connection policy configuration
-//   - ProtocolNegotiator: Protocol version negotiation
-//   - TLS validation: Certificate and configuration validation
+// Package connection provides policy management for OpenClaw SDK.
 package connection
 
-import (
-	"time"
-)
-
-// PolicyManager manages connection policies.
-// It defines rules for reconnection behavior and ping intervals.
+// PolicyManager manages server policies received in hello-ok response.
 type PolicyManager struct {
-	maxReconnectAttempts int           // Maximum number of reconnection attempts (0 = infinite)
-	pingInterval         time.Duration // Interval between ping messages
+	policy       Policy
+	hasSetPolicy bool
 }
 
-// NewPolicyManager creates a new policy manager with the specified settings.
-func NewPolicyManager(maxReconnectAttempts int, pingInterval time.Duration) *PolicyManager {
+// NewPolicyManager creates a new PolicyManager with default policy.
+func NewPolicyManager() *PolicyManager {
 	return &PolicyManager{
-		maxReconnectAttempts: maxReconnectAttempts,
-		pingInterval:         pingInterval,
+		policy:       DefaultPolicy(),
+		hasSetPolicy: false,
 	}
 }
 
-// MaxReconnectAttempts returns the maximum number of reconnect attempts.
-// Returns 0 for infinite retries.
-func (pm *PolicyManager) MaxReconnectAttempts() int {
-	return pm.maxReconnectAttempts
+// SetPolicies stores policies from hello-ok response.
+func (pm *PolicyManager) SetPolicies(policy Policy) {
+	pm.policy = policy
+	pm.hasSetPolicy = true
 }
 
-// PingInterval returns the configured ping interval.
-func (pm *PolicyManager) PingInterval() time.Duration {
-	return pm.pingInterval
+// HasPolicy checks if policy has been explicitly set.
+func (pm *PolicyManager) HasPolicy() bool {
+	return pm.hasSetPolicy
 }
 
-// ShouldReconnect checks if reconnection should be attempted based on the attempt count.
-// Returns true if more attempts should be made, false otherwise.
-func (pm *PolicyManager) ShouldReconnect(attemptCount int) bool {
-	if pm.maxReconnectAttempts == 0 {
-		return true // Infinite retries
-	}
-	return attemptCount < pm.maxReconnectAttempts
+// GetPolicy returns the current policy.
+func (pm *PolicyManager) GetPolicy() Policy {
+	return pm.policy
+}
+
+// GetMaxPayload returns maximum payload size.
+func (pm *PolicyManager) GetMaxPayload() int64 {
+	return pm.policy.MaxPayload
+}
+
+// GetMaxBufferedBytes returns maximum buffered bytes.
+func (pm *PolicyManager) GetMaxBufferedBytes() int64 {
+	return pm.policy.MaxBufferedBytes
+}
+
+// GetTickIntervalMs returns tick interval in milliseconds.
+func (pm *PolicyManager) GetTickIntervalMs() int64 {
+	return pm.policy.TickIntervalMs
 }

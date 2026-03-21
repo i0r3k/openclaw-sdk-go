@@ -113,47 +113,35 @@ func TestBoundary_LargePayload(t *testing.T) {
 	}
 	defer client.Close()
 
-	// Create large payload (1MB)
+	// Create large payload (1MB of printable chars)
 	largePayload := make([]byte, 1024*1024)
 	for i := range largePayload {
-		largePayload[i] = byte(i % 256)
+		largePayload[i] = byte('a' + (i % 26))
 	}
 
 	// Test that large payload doesn't cause panic
-	req := &protocol.RequestFrame{
-		RequestID: "large-payload-test",
-		Method:    "test",
-		Params:    largePayload,
-	}
+	req := protocol.NewRequestFrame("large-payload-test", "test", largePayload)
 
 	// Just verify construction doesn't panic
-	if req.RequestID == "" {
+	if req.ID == "" {
 		t.Error("request ID is empty")
 	}
 }
 
 // TestBoundary_ZeroLengthPayload tests zero-length payload
 func TestBoundary_ZeroLengthPayload(t *testing.T) {
-	req := &protocol.RequestFrame{
-		RequestID: "zero-payload",
-		Method:    "test",
-		Params:    []byte{},
-	}
+	req := protocol.NewRequestFrame("zero-payload", "test", []byte(`{}`))
 
-	if req.RequestID == "" {
+	if req.ID == "" {
 		t.Error("request ID is empty")
 	}
 }
 
 // TestBoundary_NilPayload tests nil payload
 func TestBoundary_NilPayload(t *testing.T) {
-	req := &protocol.RequestFrame{
-		RequestID: "nil-payload",
-		Method:    "test",
-		Params:    nil,
-	}
+	req := protocol.NewRequestFrame("nil-payload", "test", nil)
 
-	if req.RequestID == "" {
+	if req.ID == "" {
 		t.Error("request ID is empty")
 	}
 }
@@ -173,13 +161,10 @@ func TestBoundary_SpecialCharactersInRequestID(t *testing.T) {
 
 	for _, id := range specialIDs {
 		t.Run(id, func(t *testing.T) {
-			req := &protocol.RequestFrame{
-				RequestID: id,
-				Method:    "test",
-			}
+			req := protocol.NewRequestFrame(id, "test", nil)
 
-			if req.RequestID != id {
-				t.Errorf("RequestID = %q, want %q", req.RequestID, id)
+			if req.ID != id {
+				t.Errorf("ID = %q, want %q", req.ID, id)
 			}
 		})
 	}

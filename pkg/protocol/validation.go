@@ -1,7 +1,7 @@
 // Package protocol provides protocol frame types and utilities for OpenClaw SDK.
 //
 // This package provides validation for protocol frames:
-//   - Validator: Validates GatewayFrame, RequestFrame, ResponseFrame, EventFrame
+//   - Validator: Validates RequestFrame, ResponseFrame, EventFrame
 //   - ValidationError: Structured validation errors with field and message
 package protocol
 
@@ -30,27 +30,13 @@ func NewValidator() *Validator {
 	return &Validator{}
 }
 
-// ValidateGatewayFrame validates a gateway frame
-func (v *Validator) ValidateGatewayFrame(frame *GatewayFrame) error {
-	if frame == nil {
-		return errors.New("frame is nil")
-	}
-	if frame.Type == "" {
-		return &ValidationError{Field: "Type", Message: "is required"}
-	}
-	if !frame.Type.IsValid() {
-		return &ValidationError{Field: "Type", Message: "is not a valid frame type"}
-	}
-	return nil
-}
-
 // ValidateRequestFrame validates a request frame
 func (v *Validator) ValidateRequestFrame(frame *RequestFrame) error {
 	if frame == nil {
 		return errors.New("frame is nil")
 	}
-	if frame.RequestID == "" {
-		return &ValidationError{Field: "RequestID", Message: "is required"}
+	if frame.ID == "" {
+		return &ValidationError{Field: "ID", Message: "is required"}
 	}
 	if frame.Method == "" {
 		return &ValidationError{Field: "Method", Message: "is required"}
@@ -74,15 +60,17 @@ func (v *Validator) ValidateResponseFrame(frame *ResponseFrame) error {
 	if frame == nil {
 		return errors.New("frame is nil")
 	}
-	if frame.RequestID == "" {
-		return &ValidationError{Field: "RequestID", Message: "is required"}
+	if frame.ID == "" {
+		return &ValidationError{Field: "ID", Message: "is required"}
 	}
-	// Success and Error are mutually exclusive
-	if frame.Success && frame.Error != nil {
-		return &ValidationError{Field: "Error", Message: "must be nil when Success is true"}
+	// Ok and Error are mutually exclusive
+	// If Ok=true, Error must be nil
+	// If Ok=false, Error must not be nil (except for progress updates)
+	if frame.Ok && frame.Error != nil {
+		return &ValidationError{Field: "Error", Message: "must be nil when Ok is true"}
 	}
-	if !frame.Success && frame.Error == nil {
-		return &ValidationError{Field: "Error", Message: "is required when Success is false"}
+	if !frame.Ok && frame.Error == nil && !frame.Progress {
+		return &ValidationError{Field: "Error", Message: "is required when Ok is false and Progress is false"}
 	}
 	return nil
 }
@@ -92,8 +80,8 @@ func (v *Validator) ValidateEventFrame(frame *EventFrame) error {
 	if frame == nil {
 		return errors.New("frame is nil")
 	}
-	if frame.EventType == "" {
-		return &ValidationError{Field: "EventType", Message: "is required"}
+	if frame.Event == "" {
+		return &ValidationError{Field: "Event", Message: "is required"}
 	}
 	return nil
 }

@@ -9,12 +9,12 @@ package transport
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/frisbee-ai/openclaw-sdk-go/pkg/connection"
-	"github.com/frisbee-ai/openclaw-sdk-go/pkg/types"
 	"github.com/gorilla/websocket"
 )
 
@@ -113,7 +113,7 @@ func Dial(url string, header http.Header, config *WebSocketConfig) (*WebSocketTr
 		validator := connection.NewTlsValidator(tlsConfig)
 		tlsClientConfig, err := validator.GetTLSConfig()
 		if err != nil {
-			return nil, types.NewTransportError("failed to build TLS config", err)
+			return nil, fmt.Errorf("failed to build TLS config: %w", err)
 		}
 		dialer.TLSClientConfig = tlsClientConfig
 	}

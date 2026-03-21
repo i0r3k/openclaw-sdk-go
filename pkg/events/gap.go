@@ -7,102 +7,168 @@ package events
 
 import (
 	"sync"
+	"time"
 )
+
+// GapRecoveryMode defines how gap recovery is handled.
+type GapRecoveryMode string
+
+const (
+	GapRecoveryModeReconnect GapRecoveryMode = "reconnect"
+	GapRecoveryModeSnapshot  GapRecoveryMode = "snapshot"
+	GapRecoveryModeSkip      GapRecoveryMode = "skip"
+)
+
+// GapRecoveryConfig contains configuration for gap recovery behavior.
+type GapRecoveryConfig struct {
+	Mode             GapRecoveryMode // Recovery mode
+	OnGap            func([]GapInfo) // Callback when gaps are detected
+	SnapshotEndpoint string          // Endpoint for snapshot recovery (optional)
+}
+
+// GapDetectorConfig contains configuration for the gap detector.
+type GapDetectorConfig struct {
+	Recovery GapRecoveryConfig // Recovery configuration
+	MaxGaps  int               // Maximum gaps to track (default: 100)
+}
+
+// GapInfo represents a detected gap in the message sequence.
+type GapInfo struct {
+	Expected   uint64 // Expected sequence number
+	Received   uint64 // Received sequence number
+	DetectedAt int64  // Timestamp when gap was detected
+}
 
 // GapDetector detects message gaps in ordered message streams.
 // It tracks sequence numbers and identifies when expected messages are missing.
 type GapDetector struct {
-	mu           sync.Mutex              // Mutex for thread-safety
-	expectedSeq  uint64                  // Next expected sequence number
-	detectedGaps []Gap                   // List of detected gaps
-	onGap        func(start, end uint64) // Callback for gap detection
+	mu           sync.Mutex        // Mutex for thread-safety
+	recovery     GapRecoveryConfig // Recovery configuration
+	maxGaps      int               // Maximum gaps to track
+	lastSequence uint64            // Last recorded sequence number
+	gaps         []GapInfo         // List of detected gaps
 }
 
-// Gap represents a detected gap in the message sequence.
-// It indicates messages from Start to End (inclusive) were missing.
-type Gap struct {
-	Start uint64 // Start of the gap (first missing sequence number)
-	End   uint64 // End of the gap (last missing sequence number)
-}
-
-// NewGapDetector creates a new gap detector with an empty gap list.
+// NewGapDetector creates a new gap detector with default configuration.
 func NewGapDetector() *GapDetector {
+	return NewGapDetectorWithConfig(GapDetectorConfig{
+		Recovery: GapRecoveryConfig{
+			Mode: GapRecoveryModeSkip,
+		},
+		MaxGaps: 100,
+	})
+}
+
+// NewGapDetectorWithConfig creates a new gap detector with the given configuration.
+func NewGapDetectorWithConfig(config GapDetectorConfig) *GapDetector {
+	maxGaps := config.MaxGaps
+	if maxGaps <= 0 {
+		maxGaps = 100
+	}
 	return &GapDetector{
-		detectedGaps: make([]Gap, 0),
+		recovery: config.Recovery,
+		maxGaps:  maxGaps,
+		gaps:     make([]GapInfo, 0),
 	}
 }
 
 // SetOnGap sets the callback function to be called when a gap is detected.
-func (gd *GapDetector) SetOnGap(f func(start, end uint64)) {
+func (gd *GapDetector) SetOnGap(f func([]GapInfo)) {
 	gd.mu.Lock()
 	defer gd.mu.Unlock()
-	gd.onGap = f
+	gd.recovery.OnGap = f
 }
 
-// Record records a message sequence number.
+// RecordSequence records a message sequence number.
 // It detects gaps when sequence numbers are skipped.
-func (gd *GapDetector) Record(seq uint64) {
+func (gd *GapDetector) RecordSequence(seq uint64) {
+	// Deferred side-effects list — executed after all state updates
+	var deferred []func()
+
 	gd.mu.Lock()
-	defer gd.mu.Unlock()
 
-	// Handle first message
-	if gd.expectedSeq == 0 {
-		gd.expectedSeq = seq + 1
-		return
-	}
+	// Check for gap if we have a previous sequence
+	if gd.lastSequence > 0 {
+		expected := gd.lastSequence + 1
 
-	// Detect gap (but not for duplicate sequences)
-	if seq > gd.expectedSeq {
-		gap := Gap{Start: gd.expectedSeq, End: seq - 1}
-		gd.detectedGaps = append(gd.detectedGaps, gap)
+		// Only detect gaps for sequences after the last one
+		// Duplicate or old sequences are ignored
+		if seq > gd.lastSequence && seq > expected {
+			gap := GapInfo{
+				Expected:   expected,
+				Received:   seq,
+				DetectedAt: int64(getTimeNow()),
+			}
 
-		// Call callback OUTSIDE the lock to prevent deadlock
-		onGap := gd.onGap
-		if onGap != nil {
-			gd.mu.Unlock()
-			onGap(gap.Start, gap.End)
-			gd.mu.Lock()
+			// State mutation FIRST
+			gd.gaps = append(gd.gaps, gap)
+
+			// Trim if exceeds max (use splice to avoid array copy)
+			if len(gd.gaps) > gd.maxGaps {
+				gd.gaps = gd.gaps[len(gd.gaps)-gd.maxGaps:]
+			}
+
+			// Capture side-effects (do not execute yet)
+			if gd.recovery.OnGap != nil {
+				deferred = append(deferred, func() {
+					gd.recovery.OnGap(gd.gaps)
+				})
+			}
 		}
 	}
 
-	// Advance expected (handle duplicates by not going backwards)
-	if seq+1 > gd.expectedSeq {
-		gd.expectedSeq = seq + 1
+	// Update lastSequence BEFORE executing side-effects
+	gd.lastSequence = seq
+
+	gd.mu.Unlock()
+
+	// Execute deferred side-effects — state is already consistent
+	for _, op := range deferred {
+		op()
 	}
 }
 
-// Gaps returns a copy of detected gaps.
-// Thread-safe method that returns a copy to prevent external mutation.
-func (gd *GapDetector) Gaps() []Gap {
+// HasGap returns true if gaps have been detected.
+func (gd *GapDetector) HasGap() bool {
 	gd.mu.Lock()
 	defer gd.mu.Unlock()
-
-	// Return a copy to prevent external mutation
-	result := make([]Gap, len(gd.detectedGaps))
-	copy(result, gd.detectedGaps)
-	return result
+	return len(gd.gaps) > 0
 }
 
 // GapCount returns the number of detected gaps.
 func (gd *GapDetector) GapCount() int {
 	gd.mu.Lock()
 	defer gd.mu.Unlock()
-	return len(gd.detectedGaps)
+	return len(gd.gaps)
+}
+
+// GetGaps returns a copy of detected gaps.
+func (gd *GapDetector) GetGaps() []GapInfo {
+	gd.mu.Lock()
+	defer gd.mu.Unlock()
+	result := make([]GapInfo, len(gd.gaps))
+	copy(result, gd.gaps)
+	return result
+}
+
+// GetLastSequence returns the last recorded sequence number.
+func (gd *GapDetector) GetLastSequence() uint64 {
+	gd.mu.Lock()
+	defer gd.mu.Unlock()
+	return gd.lastSequence
 }
 
 // Reset resets the gap detector to its initial state.
-// Clears all detected gaps and resets the expected sequence.
+// Clears all detected gaps and resets the last sequence.
 func (gd *GapDetector) Reset() {
 	gd.mu.Lock()
 	defer gd.mu.Unlock()
-	gd.expectedSeq = 0
-	gd.detectedGaps = nil
-	gd.detectedGaps = make([]Gap, 0)
+	gd.lastSequence = 0
+	gd.gaps = nil
+	gd.gaps = make([]GapInfo, 0)
 }
 
-// ExpectedSequence returns the next expected sequence number.
-func (gd *GapDetector) ExpectedSequence() uint64 {
-	gd.mu.Lock()
-	defer gd.mu.Unlock()
-	return gd.expectedSeq
+// getTimeNow returns current Unix timestamp in milliseconds.
+func getTimeNow() int64 {
+	return time.Now().UnixMilli()
 }

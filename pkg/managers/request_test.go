@@ -2,6 +2,7 @@ package managers
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -12,17 +13,9 @@ func TestRequestManager_SendAndReceive(t *testing.T) {
 	ctx := context.Background()
 	rm := NewRequestManager(ctx)
 
-	req := &protocol.RequestFrame{
-		RequestID: "test-123",
-		Method:    "test",
-		Timestamp: time.Now(),
-	}
+	req := protocol.NewRequestFrame("test-123", "test", nil)
 
-	resp := &protocol.ResponseFrame{
-		RequestID: "test-123",
-		Success:   true,
-		Timestamp: time.Now(),
-	}
+	resp := protocol.NewResponseFrameSuccess("test-123", json.RawMessage(`{}`))
 
 	// Send response after a small delay
 	go func() {
@@ -34,8 +27,8 @@ func TestRequestManager_SendAndReceive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if got.RequestID != "test-123" {
-		t.Errorf("expected 'test-123', got '%s'", got.RequestID)
+	if got.ID != "test-123" {
+		t.Errorf("expected 'test-123', got '%s'", got.ID)
 	}
 
 	_ = rm.Close()
@@ -45,11 +38,7 @@ func TestRequestManager_ContextCancellation(t *testing.T) {
 	ctx := context.Background()
 	rm := NewRequestManager(ctx)
 
-	req := &protocol.RequestFrame{
-		RequestID: "test-cancel",
-		Method:    "test",
-		Timestamp: time.Now(),
-	}
+	req := protocol.NewRequestFrame("test-cancel", "test", nil)
 
 	// Create cancelled context
 	ctx, cancel := context.WithCancel(context.Background())

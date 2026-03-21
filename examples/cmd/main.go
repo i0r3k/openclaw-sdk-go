@@ -48,15 +48,16 @@ func main() {
 
 	// Send a ping request
 	fmt.Println("\nSending ping request...")
-	resp, err := client.SendRequest(ctx, &protocol.RequestFrame{
-		RequestID: "req-" + time.Now().Format("20060102150405"),
-		Method:    "ping",
-		Timestamp: time.Now(),
-	})
+	req := protocol.NewRequestFrame(
+		"req-"+time.Now().Format("20060102150405"),
+		"ping",
+		nil,
+	)
+	resp, err := client.SendRequest(ctx, req)
 	if err != nil {
 		log.Printf("Request failed: %v", err)
 	} else {
-		fmt.Printf("Response: Success=%v, Result=%s\n", resp.Success, string(resp.Result))
+		fmt.Printf("Response: Ok=%v, Payload=%s\n", resp.Ok, string(resp.Payload))
 	}
 
 	// Wait for interrupt signal

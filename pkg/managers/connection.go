@@ -38,12 +38,14 @@ func NewConnectionManager(ctx context.Context, config *ClientConfig, eventMgr *E
 // ConnectionManager manages WebSocket connections.
 // It handles connection lifecycle, state transitions, and transport management.
 type ConnectionManager struct {
-	config    *ClientConfig                      // Client configuration
-	state     *connection.ConnectionStateMachine // Connection state machine
-	transport transport.Transport                // Underlying transport
-	eventMgr  *EventManager                      // Event manager for emitting events
-	ctx       context.Context                    // Context for lifecycle
-	mu        sync.Mutex                         // Mutex for thread-safety
+	config        *ClientConfig                      // Client configuration
+	state         *connection.ConnectionStateMachine // Connection state machine
+	transport     transport.Transport                // Underlying transport
+	eventMgr      *EventManager                      // Event manager for emitting events
+	ctx           context.Context                    // Context for lifecycle
+	connectParams *connection.ConnectParams          // Connection parameters for handshake
+	serverInfo    *connection.HelloOk                // Server info from handshake
+	mu            sync.Mutex                         // Mutex for thread-safety
 }
 
 // Connect establishes a WebSocket connection to the configured URL.
@@ -53,7 +55,7 @@ func (cm *ConnectionManager) Connect(ctx context.Context) error {
 	defer cm.mu.Unlock()
 
 	if cm.transport != nil && cm.transport.IsConnected() {
-		return types.NewConnectionError("already connected", nil)
+		return types.NewConnectionError("CONNECTION_ALREADY_CONNECTED", "already connected", false, nil)
 	}
 
 	if err := cm.state.Transition(types.StateConnecting, nil); err != nil {
@@ -90,6 +92,53 @@ func (cm *ConnectionManager) Connect(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// ConnectWithParams establishes a connection and performs the handshake.
+func (cm *ConnectionManager) ConnectWithParams(ctx context.Context, params *connection.ConnectParams) error {
+	// First connect
+	if err := cm.Connect(ctx); err != nil {
+		return err
+	}
+
+	// Store params for potential reconnect
+	cm.mu.Lock()
+	cm.connectParams = params
+	cm.mu.Unlock()
+
+	// Perform handshake - send connect request and wait for HelloOk
+	// The HelloOk comes back as a response to our connect request
+	helloOk, err := cm.performHandshake(ctx, params)
+	if err != nil {
+		_ = cm.Disconnect()
+		return err
+	}
+
+	cm.mu.Lock()
+	cm.serverInfo = helloOk
+	cm.mu.Unlock()
+
+	// Transition to ready state
+	if err := cm.state.Transition(types.StateAuthenticated, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// performHandshake sends the connect request and waits for HelloOk response.
+func (cm *ConnectionManager) performHandshake(ctx context.Context, params *connection.ConnectParams) (*connection.HelloOk, error) {
+	// TODO: This is a simplified handshake - actual implementation
+	// would send a request and wait for response via the transport
+	// For now, return nil to indicate handshake is pending actual implementation
+	return nil, nil
+}
+
+// GetServerInfo returns the server info from the handshake.
+func (cm *ConnectionManager) GetServerInfo() *connection.HelloOk {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	return cm.serverInfo
 }
 
 // Disconnect closes the WebSocket connection.

@@ -8,11 +8,11 @@ import (
 // FuzzValidateRequestFrame tests RequestFrame validation with fuzzed input
 func FuzzValidateRequestFrame(f *testing.F) {
 	// Seed with valid and invalid examples
-	f.Add([]byte(`{"requestId":"test","method":"ping","timestamp":"2024-01-01T00:00:00Z"}`))
-	f.Add([]byte(`{"requestId":"","method":"test","timestamp":"2024-01-01T00:00:00Z"}`))
+	f.Add([]byte(`{"id":"test","method":"ping"}`))
+	f.Add([]byte(`{"id":"","method":"test"}`))
 	f.Add([]byte(`{invalid json`))
 	f.Add([]byte(``))
-	f.Add([]byte(`{"requestId":"` + string(make([]byte, 10000)) + `"}`))
+	f.Add([]byte(`{"id":"` + string(make([]byte, 10000)) + `"}`))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Validate that parsing doesn't panic
@@ -35,8 +35,8 @@ func FuzzValidateRequestFrame(f *testing.F) {
 // FuzzValidateResponseFrame tests ResponseFrame validation with fuzzed input
 func FuzzValidateResponseFrame(f *testing.F) {
 	// Seed with examples
-	f.Add([]byte(`{"requestId":"test","success":true,"result":{}}`))
-	f.Add([]byte(`{"requestId":"","success":false,"error":{"code":"ERR","message":"test"}}`))
+	f.Add([]byte(`{"id":"test","ok":true,"payload":{}}`))
+	f.Add([]byte(`{"id":"","ok":false,"error":{"code":"ERR","message":"test"}}`))
 	f.Add([]byte(`{invalid`))
 	f.Add([]byte(``))
 
@@ -57,8 +57,8 @@ func FuzzValidateResponseFrame(f *testing.F) {
 // FuzzValidateEventFrame tests EventFrame validation with fuzzed input
 func FuzzValidateEventFrame(f *testing.F) {
 	// Seed with examples
-	f.Add([]byte(`{"eventType":"connected","data":{},"timestamp":"2024-01-01T00:00:00Z"}`))
-	f.Add([]byte(`{"eventType":"","data":null}`))
+	f.Add([]byte(`{"event":"connected","payload":{}}`))
+	f.Add([]byte(`{"event":"","payload":null}`))
 	f.Add([]byte(`{invalid`))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -78,11 +78,9 @@ func FuzzValidateEventFrame(f *testing.F) {
 // FuzzFrameType tests FrameType validation with fuzzed input
 func FuzzFrameType(f *testing.F) {
 	// Seed with valid types
-	f.Add([]byte("gateway"))
-	f.Add([]byte("request"))
-	f.Add([]byte("response"))
+	f.Add([]byte("req"))
+	f.Add([]byte("res"))
 	f.Add([]byte("event"))
-	f.Add([]byte("error"))
 	f.Add([]byte(""))
 	f.Add([]byte("invalid"))
 	f.Add([]byte(string(make([]byte, 1000))))
@@ -122,9 +120,9 @@ func FuzzRequestID(f *testing.F) {
 		}()
 
 		// Create request frame with fuzzed ID
-		frame := NewRequestFrame(string(id), "test")
+		frame := NewRequestFrame(string(id), "test", nil)
 		if frame != nil {
-			_ = frame.RequestID
+			_ = frame.ID
 		}
 	})
 }
@@ -146,7 +144,7 @@ func FuzzMethod(f *testing.F) {
 		}()
 
 		// Create request frame with fuzzed method
-		frame := NewRequestFrame("test-id", string(method))
+		frame := NewRequestFrame("test-id", string(method), nil)
 		if frame != nil {
 			_ = frame.Method
 		}
@@ -169,9 +167,9 @@ func FuzzEventType(f *testing.F) {
 		}()
 
 		// Create event frame with fuzzed type
-		frame := NewEventFrame(string(eventType))
+		frame := NewEventFrame(string(eventType), nil)
 		if frame != nil {
-			_ = frame.EventType
+			_ = frame.Event
 		}
 	})
 }
@@ -237,7 +235,7 @@ func FuzzLargeInput(f *testing.F) {
 
 		// Test that large inputs don't cause crashes
 		if len(data) > 0 {
-			frame := NewRequestFrame(string(data), "test")
+			frame := NewRequestFrame(string(data), "test", nil)
 			_ = frame
 		}
 	})
@@ -268,7 +266,7 @@ func FuzzSpecialCharacters(f *testing.F) {
 		}()
 
 		// Test with special characters in various fields
-		frame := NewRequestFrame(string(data), string(data))
+		frame := NewRequestFrame(string(data), string(data), nil)
 		_ = frame
 	})
 }
