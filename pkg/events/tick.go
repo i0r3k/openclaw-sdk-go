@@ -15,15 +15,17 @@ const defaultStaleMultiplier = 2
 // TickMonitor monitors connection heartbeat.
 // It tracks tick events and detects when expected ticks are not received within the timeout.
 type TickMonitor struct {
-	tickIntervalMs  int64        // Tick interval in milliseconds
-	staleMultiplier int          // Multiplier for stale threshold
-	lastTickTime    int64        // Last tick timestamp (in milliseconds)
-	staleDetected   bool         // Whether stale state has been detected
-	staleStartTime  *int64       // When stale state started
-	started         bool         // Whether monitoring is started
-	mu              sync.RWMutex // Mutex for thread-safety
-	onStale         func()       // Callback when connection becomes stale
-	onRecovered     func()       // Callback when connection recovers
+	tickIntervalMs  int64          // Tick interval in milliseconds
+	staleMultiplier int            // Multiplier for stale threshold
+	lastTickTime    int64          // Last tick timestamp (in milliseconds)
+	staleDetected   bool           // Whether stale state has been detected
+	staleStartTime  *int64         // When stale state started
+	started         bool           // Whether monitoring is started
+	mu              sync.RWMutex   // Mutex for thread-safety
+	onStale         func()         // Callback when connection becomes stale
+	onRecovered     func()         // Callback when connection recovers
+	done            chan struct{}  // Channel to signal background goroutine stop
+	wg              sync.WaitGroup // WaitGroup for background goroutine
 }
 
 // NewTickMonitor creates a new tick monitor with the specified interval and timeout.
@@ -52,18 +54,53 @@ func (tm *TickMonitor) SetOnRecovered(f func()) {
 	tm.onRecovered = f
 }
 
-// Start begins the tick monitoring.
+// Start begins the tick monitoring with a background goroutine
+// that periodically checks for staleness.
 func (tm *TickMonitor) Start() {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
+	if tm.started {
+		return
+	}
 	tm.started = true
+	tm.done = make(chan struct{})
+
+	checkInterval := time.Duration(tm.tickIntervalMs) * time.Millisecond
+	if checkInterval <= 0 {
+		checkInterval = time.Second
+	}
+
+	done := tm.done
+	tm.wg.Add(1)
+	go func() {
+		defer tm.wg.Done()
+		ticker := time.NewTicker(checkInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				tm.CheckStale()
+			}
+		}
+	}()
 }
 
-// Stop stops the tick monitoring.
+// Stop stops the tick monitoring and waits for the background goroutine to exit.
 func (tm *TickMonitor) Stop() {
 	tm.mu.Lock()
-	defer tm.mu.Unlock()
+	if !tm.started {
+		tm.mu.Unlock()
+		return
+	}
 	tm.started = false
+	done := tm.done
+	tm.done = nil
+	tm.mu.Unlock()
+
+	close(done)
+	tm.wg.Wait()
 }
 
 // RecordTick records an incoming tick with the given timestamp.
