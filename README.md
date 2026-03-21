@@ -2,6 +2,7 @@
 
 [![OpenClaw SDK](https://img.shields.io/badge/OpenClaw-SDK-orange?logo=github)](https://openclaw.ai)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Codecov](https://codecov.io/gh/frisbee-ai/openclaw-sdk-go/branch/main/graph/badge.svg)](https://codecov.io/gh/frisbee-ai/openclaw-sdk-go)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 > Feature-complete WebSocket SDK for Go with automatic reconnection, event handling, and request/response correlation.
