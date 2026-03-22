@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,14 +22,52 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: stable
+          go-version-file: go.mod
           cache: true
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@git-cliff
+
+      - name: Determine previous tag for changelog
+        id: determine-tag
+        run: |
+          # Extract tag from git ref
+          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+
+          # Check if current tag is a prerelease version (alpha, beta, rc)
+          if [[ "$CURRENT_TAG" =~ -alpha\.|-beta\.|-rc\. ]]; then
+            # For prerelease: find the previous tag (any type)
+            PREV_TAG=$(git describe --tags --abbrev=0 "${CURRENT_TAG}^" 2>/dev/null || echo "")
+            echo "current_type=prerelease" >> $GITHUB_OUTPUT
+          else
+            # For stable: find the previous stable tag
+            PREV_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | grep -v "$CURRENT_TAG" | head -n 1 || echo "")
+            echo "current_type=stable" >> $GITHUB_OUTPUT
+          fi
+
+          echo "previous_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+          echo "Current tag: ${CURRENT_TAG}, Previous tag: ${PREV_TAG}"
+
+      - name: Generate Release Notes
+        run: |
+          # Generate changelog using commit range
+          PREV_TAG="${{ steps.determine-tag.outputs.previous_tag }}"
+          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+
+          if [ -z "$PREV_TAG" ]; then
+            # First release: generate changelog from beginning of repo
+            echo "First release detected, generating full changelog..."
+            git-cliff --config cliff.toml --strip all --all > /tmp/RELEASE_NOTES.md
+          else
+            # Subsequent release: generate changelog from previous tag
+            git-cliff --config cliff.toml --strip all -- ${PREV_TAG}..${CURRENT_TAG} > /tmp/RELEASE_NOTES.md
+          fi
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
+          args: release --clean --release-notes /tmp/RELEASE_NOTES.md --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

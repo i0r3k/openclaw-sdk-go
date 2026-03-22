@@ -6,78 +6,12 @@ version: 2
 
 project_name: openclaw-sdk-go
 
-# Release configuration
-release:
-  github:
-    owner: frisbee-ai
-    name: openclaw-sdk-go
-  draft: true
-  mode: replace
-  header: |
-    ## What's Changed
-  footer: |
-    **Full Changelog**: https://github.com/frisbee-ai/openclaw-sdk-go/compare/{{ .PreviousTag }}...{{ .Tag }}
-
-# Build example binaries (optional, for user convenience)
-builds:
-  # CLI example
-  - id: cli-example
-    main: ./examples/cmd/main.go
-    binary: cli-example
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    goamd64:
-      - v1
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-    no_unique_dist_dir: true
-
-  # Echo server example
-  - id: echo-server
-    main: ./examples/server/main.go
-    binary: echo-server
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    goamd64:
-      - v1
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-    no_unique_dist_dir: true
-
-# Archive configuration
-archives:
-  - name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    formats:
-      - tar.gz
-      - zip
-    files:
-      - README.md
-      - LICENSE
-      - examples/*
-    format_overrides:
-      - goos: windows
-        formats: [zip]
-
-# Checksums
-checksum:
-  name_template: 'checksums.txt'
-  algorithm: sha256
+# Before hooks
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+    - go test ./...
 
 # Go module verification (critical for library projects)
 gomod:
@@ -88,31 +22,23 @@ gomod:
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
-# Changelog
+# Changelog - use git-cliff for rich formatted output
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
-      - '^ci:'
-      - '^style:'
-      - '^refactor:'
-      - Merge pull request
-      - Merge branch
+  # Use git-cliff to generate changelog with emoji prefixes and grouped sections
+  command: git-cliff --configuration cliff.toml --unreleased --tag {{ if .Env.GITHUB_REF_NAME }}{{ .Env.GITHUB_REF_NAME }}{{ else }}{{ .Tag }}{{ end }}
+  env:
+    - GITHUB_REF_NAME
+
+# Release configuration
+release:
+  prerelease: auto
+  mode: replace
+  replace_existing_artifacts: true
 
 # Source distribution
 source:
   enabled: true
   name_template: '{{ .ProjectName }}-{{ .Version }}-source'
-
-# Before hooks
-before:
-  hooks:
-    - go mod tidy
-    - go generate ./...
-    - go test ./...
 
 # Announcement (optional)
 announce:
