@@ -19,7 +19,7 @@ gomod:
   mod: mod
 
 # Skip build, as this's a library project
-build:
+builds:
   skip: true
 
 # Snapshots (for testing)
