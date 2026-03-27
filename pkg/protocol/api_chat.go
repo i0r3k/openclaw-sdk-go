@@ -39,3 +39,13 @@ type ChatTitleParams struct {
 type ChatTitleResult struct {
 	Title string `json:"title"`
 }
+
+// ChatAbortParams parameters for aborting a chat.
+type ChatAbortParams struct {
+	ChatID string `json:"chatId"`
+}
+
+// ChatSendParams parameters for sending a chat message.
+type ChatSendParams struct {
+	ChatID string `json:"chatId"`
+}

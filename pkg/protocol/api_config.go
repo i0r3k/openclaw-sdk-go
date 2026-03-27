@@ -42,3 +42,13 @@ type ConfigSchemaParams struct {
 type ConfigSchemaResponse struct {
 	Schema any `json:"schema"`
 }
+
+// ConfigSchemaLookupParams parameters for looking up a config schema.
+type ConfigSchemaLookupParams struct {
+	Key string `json:"key"`
+}
+
+// ConfigSchemaLookupResult result of looking up a config schema.
+type ConfigSchemaLookupResult struct {
+	Schema any `json:"schema"`
+}

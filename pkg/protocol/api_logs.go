@@ -33,3 +33,32 @@ type ExecApprovalsSetParams struct {
 type ExecApprovalsSnapshot struct {
 	Approvals []any `json:"approvals"`
 }
+
+// ExecApprovalsNodeGetParams parameters for getting node exec approvals.
+type ExecApprovalsNodeGetParams struct {
+	NodeID string `json:"nodeId"`
+}
+
+// ExecApprovalsNodeSetParams parameters for setting node exec approvals.
+type ExecApprovalsNodeSetParams struct {
+	NodeID   string `json:"nodeId"`
+	Approved bool   `json:"approved"`
+}
+
+// ExecApprovalRequestParams parameters for requesting exec approval.
+type ExecApprovalRequestParams struct {
+	NodeID  string `json:"nodeId"`
+	Command string `json:"command"`
+}
+
+// ExecApprovalWaitDecisionParams parameters for waiting for exec approval decision.
+type ExecApprovalWaitDecisionParams struct {
+	NodeID  string `json:"nodeId"`
+	Timeout int64  `json:"timeout,omitempty"`
+}
+
+// ExecApprovalResolveParams parameters for resolving exec approval.
+type ExecApprovalResolveParams struct {
+	NodeID   string `json:"nodeId"`
+	Approved bool   `json:"approved"`
+}

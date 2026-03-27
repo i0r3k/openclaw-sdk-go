@@ -44,12 +44,6 @@ func (api *SessionsAPI) Preview(ctx context.Context, params protocol.SessionsPre
 	return result, nil
 }
 
-// Resolve resolves a session.
-func (api *SessionsAPI) Resolve(ctx context.Context, params protocol.SessionsResolveParams) error {
-	_, err := api.request(ctx, "sessions.resolve", params)
-	return err
-}
-
 // Patch patches a session.
 func (api *SessionsAPI) Patch(ctx context.Context, params protocol.SessionsPatchParams) error {
 	_, err := api.request(ctx, "sessions.patch", params)
@@ -85,4 +79,46 @@ func (api *SessionsAPI) Usage(ctx context.Context) (protocol.SessionsUsageResult
 		return protocol.SessionsUsageResult{}, err
 	}
 	return result, nil
+}
+
+// Create creates a new session.
+func (api *SessionsAPI) Create(ctx context.Context, params protocol.SessionsCreateParams) error {
+	_, err := api.request(ctx, "sessions.create", params)
+	return err
+}
+
+// Send sends a message in a session.
+func (api *SessionsAPI) Send(ctx context.Context, params protocol.SessionsSendParams) error {
+	_, err := api.request(ctx, "sessions.send", params)
+	return err
+}
+
+// Abort aborts a session.
+func (api *SessionsAPI) Abort(ctx context.Context, params protocol.SessionsAbortParams) error {
+	_, err := api.request(ctx, "sessions.abort", params)
+	return err
+}
+
+// Subscribe subscribes to a session.
+func (api *SessionsAPI) Subscribe(ctx context.Context, params protocol.SessionsSubscribeParams) error {
+	_, err := api.request(ctx, "sessions.subscribe", params)
+	return err
+}
+
+// Unsubscribe unsubscribes from a session.
+func (api *SessionsAPI) Unsubscribe(ctx context.Context, params protocol.SessionsUnsubscribeParams) error {
+	_, err := api.request(ctx, "sessions.unsubscribe", params)
+	return err
+}
+
+// MessagesSubscribe subscribes to session messages.
+func (api *SessionsAPI) MessagesSubscribe(ctx context.Context, params protocol.SessionsMessagesSubscribeParams) error {
+	_, err := api.request(ctx, "sessions.messages.subscribe", params)
+	return err
+}
+
+// MessagesUnsubscribe unsubscribes from session messages.
+func (api *SessionsAPI) MessagesUnsubscribe(ctx context.Context, params protocol.SessionsMessagesUnsubscribeParams) error {
+	_, err := api.request(ctx, "sessions.messages.unsubscribe", params)
+	return err
 }

@@ -18,14 +18,6 @@ type BrowserOpenResult struct {
 	TabID string `json:"tabId"`
 }
 
-// BrowserCloseParams parameters for closing a browser tab.
-type BrowserCloseParams struct {
-	TabID string `json:"tabId"`
-}
-
-// BrowserCloseResult result of closing a browser tab.
-type BrowserCloseResult struct{}
-
 // BrowserListParams parameters for listing browser tabs.
 type BrowserListParams struct{}
 

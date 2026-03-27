@@ -83,15 +83,6 @@ func TestChatAPI_Delete(t *testing.T) {
 	}
 }
 
-func TestChatAPI_Inject(t *testing.T) {
-	api := NewChatAPI(mockRequest(nil, nil))
-
-	err := api.Inject(context.Background(), protocol.ChatInjectParams{ChatID: "chat-1"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 func TestChatAPI_Error(t *testing.T) {
 	api := NewChatAPI(mockRequest(nil, errors.New("network error")))
 
@@ -141,12 +132,11 @@ func TestAgentsAPI_List(t *testing.T) {
 	}
 }
 
-func TestAgentsAPI_Files(t *testing.T) {
+func TestAgentsAPI_FilesList(t *testing.T) {
 	resp := json.RawMessage(`{"files":["file1.txt","file2.txt"]}`)
 	api := NewAgentsAPI(mockRequest(resp, nil))
 
-	filesAPI := api.Files()
-	result, err := filesAPI.List(context.Background(), protocol.AgentsFilesListParams{AgentID: "agent-1"})
+	result, err := api.FilesList(context.Background(), protocol.AgentsFilesListParams{AgentID: "agent-1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -239,8 +229,7 @@ func TestNodesAPI_Pairing(t *testing.T) {
 	resp := json.RawMessage(`[{"pairingId":"p1","nodeId":"node1","status":"pending"}]`)
 	api := NewNodesAPI(mockRequest(resp, nil))
 
-	pairingAPI := api.Pairing()
-	result, err := pairingAPI.List(context.Background(), protocol.NodePairListParams{NodeID: "node1"})
+	result, err := api.PairingList(context.Background(), protocol.NodePairListParams{NodeID: "node1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -359,8 +348,7 @@ func TestAgentsAPI_Delete(t *testing.T) {
 func TestAgentsAPI_Files_Get(t *testing.T) {
 	resp := json.RawMessage(`{"content":"file content"}`)
 	api := NewAgentsAPI(mockRequest(resp, nil))
-	filesAPI := api.Files()
-	result, err := filesAPI.Get(context.Background(), protocol.AgentsFilesGetParams{AgentID: "agent-1", Path: "/test.txt"})
+	result, err := api.FilesGet(context.Background(), protocol.AgentsFilesGetParams{AgentID: "agent-1", Path: "/test.txt"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -372,8 +360,7 @@ func TestAgentsAPI_Files_Get(t *testing.T) {
 func TestAgentsAPI_Files_Set(t *testing.T) {
 	resp := json.RawMessage(`{}`)
 	api := NewAgentsAPI(mockRequest(resp, nil))
-	filesAPI := api.Files()
-	_, err := filesAPI.Set(context.Background(), protocol.AgentsFilesSetParams{AgentID: "agent-1", Path: "/test.txt", Content: "file content"})
+	_, err := api.FilesSet(context.Background(), protocol.AgentsFilesSetParams{AgentID: "agent-1", Path: "/test.txt", Content: "file content"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -390,14 +377,6 @@ func TestSessionsAPI_Preview(t *testing.T) {
 	}
 	if result.Preview != "preview text" {
 		t.Errorf("expected 'preview text', got %s", result.Preview)
-	}
-}
-
-func TestSessionsAPI_Resolve(t *testing.T) {
-	api := NewSessionsAPI(mockRequest(nil, nil))
-	err := api.Resolve(context.Background(), protocol.SessionsResolveParams{SessionID: "s1"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
@@ -526,8 +505,7 @@ func TestNodesAPI_PendingEnqueue(t *testing.T) {
 
 func TestNodesAPI_Pairing_Approve(t *testing.T) {
 	api := NewNodesAPI(mockRequest(nil, nil))
-	pairingAPI := api.Pairing()
-	err := pairingAPI.Approve(context.Background(), protocol.NodePairApproveParams{NodeID: "node-1", PairingID: "pair-1"})
+	err := api.PairingApprove(context.Background(), protocol.NodePairApproveParams{NodeID: "node-1", PairingID: "pair-1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -535,8 +513,7 @@ func TestNodesAPI_Pairing_Approve(t *testing.T) {
 
 func TestNodesAPI_Pairing_Reject(t *testing.T) {
 	api := NewNodesAPI(mockRequest(nil, nil))
-	pairingAPI := api.Pairing()
-	err := pairingAPI.Reject(context.Background(), protocol.NodePairRejectParams{NodeID: "node-1", PairingID: "pair-1"})
+	err := api.PairingReject(context.Background(), protocol.NodePairRejectParams{NodeID: "node-1", PairingID: "pair-1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -544,8 +521,7 @@ func TestNodesAPI_Pairing_Reject(t *testing.T) {
 
 func TestNodesAPI_Pairing_Verify(t *testing.T) {
 	api := NewNodesAPI(mockRequest(nil, nil))
-	pairingAPI := api.Pairing()
-	err := pairingAPI.Verify(context.Background(), protocol.NodePairVerifyParams{NodeID: "node-1", PairingID: "pair-1", Code: "123456"})
+	err := api.PairingVerify(context.Background(), protocol.NodePairVerifyParams{NodeID: "node-1", PairingID: "pair-1", Code: "123456"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -658,8 +634,7 @@ func TestAgentsAPI_Delete_Error(t *testing.T) {
 
 func TestAgentsAPI_Files_Get_Error(t *testing.T) {
 	api := NewAgentsAPI(mockRequest(nil, errors.New("get failed")))
-	filesAPI := api.Files()
-	_, err := filesAPI.Get(context.Background(), protocol.AgentsFilesGetParams{})
+	_, err := api.FilesGet(context.Background(), protocol.AgentsFilesGetParams{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -667,8 +642,7 @@ func TestAgentsAPI_Files_Get_Error(t *testing.T) {
 
 func TestAgentsAPI_Files_Set_Error(t *testing.T) {
 	api := NewAgentsAPI(mockRequest(nil, errors.New("set failed")))
-	filesAPI := api.Files()
-	_, err := filesAPI.Set(context.Background(), protocol.AgentsFilesSetParams{})
+	_, err := api.FilesSet(context.Background(), protocol.AgentsFilesSetParams{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -677,14 +651,6 @@ func TestAgentsAPI_Files_Set_Error(t *testing.T) {
 func TestSessionsAPI_Preview_Error(t *testing.T) {
 	api := NewSessionsAPI(mockRequest(nil, errors.New("preview failed")))
 	_, err := api.Preview(context.Background(), protocol.SessionsPreviewParams{})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-func TestSessionsAPI_Resolve_Error(t *testing.T) {
-	api := NewSessionsAPI(mockRequest(nil, errors.New("resolve failed")))
-	err := api.Resolve(context.Background(), protocol.SessionsResolveParams{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -796,8 +762,7 @@ func TestNodesAPI_PendingEnqueue_Error(t *testing.T) {
 
 func TestNodesAPI_Pairing_Approve_Error(t *testing.T) {
 	api := NewNodesAPI(mockRequest(nil, errors.New("approve failed")))
-	pairingAPI := api.Pairing()
-	err := pairingAPI.Approve(context.Background(), protocol.NodePairApproveParams{})
+	err := api.PairingApprove(context.Background(), protocol.NodePairApproveParams{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -805,8 +770,7 @@ func TestNodesAPI_Pairing_Approve_Error(t *testing.T) {
 
 func TestNodesAPI_Pairing_Reject_Error(t *testing.T) {
 	api := NewNodesAPI(mockRequest(nil, errors.New("reject failed")))
-	pairingAPI := api.Pairing()
-	err := pairingAPI.Reject(context.Background(), protocol.NodePairRejectParams{})
+	err := api.PairingReject(context.Background(), protocol.NodePairRejectParams{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -814,8 +778,7 @@ func TestNodesAPI_Pairing_Reject_Error(t *testing.T) {
 
 func TestNodesAPI_Pairing_Verify_Error(t *testing.T) {
 	api := NewNodesAPI(mockRequest(nil, errors.New("verify failed")))
-	pairingAPI := api.Pairing()
-	err := pairingAPI.Verify(context.Background(), protocol.NodePairVerifyParams{})
+	err := api.PairingVerify(context.Background(), protocol.NodePairVerifyParams{})
 	if err == nil {
 		t.Fatal("expected error")
 	}

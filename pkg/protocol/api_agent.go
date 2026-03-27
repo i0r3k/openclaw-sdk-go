@@ -32,24 +32,36 @@ type AgentsFileEntry struct {
 }
 
 // AgentsCreateParams parameters for creating an agent.
+// Updated to match TS v2.0.0 (commit 87ef46f).
 type AgentsCreateParams struct {
-	AgentID string            `json:"agentId"`
-	Files   []AgentsFileEntry `json:"files"`
+	Name      string  `json:"name"`
+	Workspace string  `json:"workspace"`
+	Emoji     *string `json:"emoji,omitempty"`
+	Avatar    *string `json:"avatar,omitempty"`
 }
 
 // AgentsCreateResult result of creating an agent.
+// Updated to match TS v2.0.0 (commit 87ef46f).
 type AgentsCreateResult struct {
-	AgentID string `json:"agentId"`
+	Ok        bool   `json:"ok"`
+	AgentID   string `json:"agentId"`
+	Name      string `json:"name"`
+	Workspace string `json:"workspace"`
 }
 
 // AgentsUpdateParams parameters for updating an agent.
+// Updated to match TS v2.0.0 (commit 87ef46f).
 type AgentsUpdateParams struct {
-	AgentID string            `json:"agentId"`
-	Files   []AgentsFileEntry `json:"files"`
+	AgentID   string  `json:"agentId"`
+	Name      *string `json:"name,omitempty"`
+	Workspace *string `json:"workspace,omitempty"`
+	Model     *string `json:"model,omitempty"`
+	Avatar    *string `json:"avatar,omitempty"`
 }
 
 // AgentsUpdateResult result of updating an agent.
 type AgentsUpdateResult struct {
+	Ok      bool   `json:"ok"`
 	AgentID string `json:"agentId"`
 }
 
@@ -145,10 +157,59 @@ type DevicePairListParams struct{}
 
 // DevicePairApproveParams parameters for approving device pairing.
 type DevicePairApproveParams struct {
-	PairingID string `json:"pairingId"`
+	NodeID    string `json:"nodeId"`
+	RequestID string `json:"requestId"`
 }
 
 // DevicePairRejectParams parameters for rejecting device pairing.
 type DevicePairRejectParams struct {
 	PairingID string `json:"pairingId"`
+}
+
+// DeviceTokenRotateParams parameters for rotating device token.
+type DeviceTokenRotateParams struct {
+	DeviceID string `json:"deviceId"`
+}
+
+// DeviceTokenRevokeParams parameters for revoking device token.
+type DeviceTokenRevokeParams struct {
+	DeviceID string `json:"deviceId"`
+}
+
+// NodeDescribeParams parameters for describing a node.
+type NodeDescribeParams struct {
+	NodeID string `json:"nodeId"`
+}
+
+// NodeDescribeResult result of describing a node.
+type NodeDescribeResult struct {
+	NodeID string `json:"nodeId"`
+	Status string `json:"status"`
+}
+
+// NodePendingPullParams parameters for pulling pending node items.
+type NodePendingPullParams struct {
+	NodeID string `json:"nodeId"`
+}
+
+// NodePendingPullResult result of pulling pending node items.
+type NodePendingPullResult struct {
+	Items []any `json:"items"`
+}
+
+// NodePendingAckParams parameters for acknowledging pending node items.
+type NodePendingAckParams struct {
+	NodeID string `json:"nodeId"`
+	ItemID string `json:"itemId"`
+}
+
+// NodeRenameParams parameters for renaming a node.
+type NodeRenameParams struct {
+	NodeID string `json:"nodeId"`
+	Name   string `json:"name"`
+}
+
+// NodeCanvasCapabilityRefreshParams parameters for refreshing canvas capability.
+type NodeCanvasCapabilityRefreshParams struct {
+	NodeID string `json:"nodeId"`
 }

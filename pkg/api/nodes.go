@@ -18,11 +18,6 @@ func NewNodesAPI(request RequestFn) *NodesAPI {
 	return &NodesAPI{request: request}
 }
 
-// Pairing provides access to node pairing operations.
-type NodesPairingAPI struct {
-	request RequestFn
-}
-
 // List returns all nodes.
 func (api *NodesAPI) List(ctx context.Context) ([]NodeInfo, error) {
 	raw, err := api.request(ctx, "node.list", protocol.NodeListParams{})
@@ -66,14 +61,58 @@ func (api *NodesAPI) PendingEnqueue(ctx context.Context, params protocol.NodePen
 	return err
 }
 
-// Pairing returns a new NodesPairingAPI for pairing operations.
-func (api *NodesAPI) Pairing() *NodesPairingAPI {
-	return &NodesPairingAPI{request: api.request}
+// Describe returns detailed information about a node.
+func (api *NodesAPI) Describe(ctx context.Context, params protocol.NodeDescribeParams) (protocol.NodeDescribeResult, error) {
+	raw, err := api.request(ctx, "node.describe", params)
+	if err != nil {
+		return protocol.NodeDescribeResult{}, err
+	}
+	var result protocol.NodeDescribeResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.NodeDescribeResult{}, err
+	}
+	return result, nil
 }
 
-// List lists node pairings.
-func (p *NodesPairingAPI) List(ctx context.Context, params protocol.NodePairListParams) ([]NodePairingInfo, error) {
-	raw, err := p.request(ctx, "node.pairing.list", params)
+// PendingPull pulls pending items from a node.
+func (api *NodesAPI) PendingPull(ctx context.Context, params protocol.NodePendingPullParams) (protocol.NodePendingPullResult, error) {
+	raw, err := api.request(ctx, "node.pending.pull", params)
+	if err != nil {
+		return protocol.NodePendingPullResult{}, err
+	}
+	var result protocol.NodePendingPullResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.NodePendingPullResult{}, err
+	}
+	return result, nil
+}
+
+// PendingAck acknowledges pending items on a node.
+func (api *NodesAPI) PendingAck(ctx context.Context, params protocol.NodePendingAckParams) error {
+	_, err := api.request(ctx, "node.pending.ack", params)
+	return err
+}
+
+// Rename renames a node.
+func (api *NodesAPI) Rename(ctx context.Context, params protocol.NodeRenameParams) error {
+	_, err := api.request(ctx, "node.rename", params)
+	return err
+}
+
+// InvokeResult returns the result of a node invoke.
+func (api *NodesAPI) InvokeResult(ctx context.Context, params protocol.NodeInvokeResultParams) (json.RawMessage, error) {
+	return api.request(ctx, "node.invoke.result", params)
+}
+
+// CanvasCapabilityRefresh refreshes canvas capability for a node.
+func (api *NodesAPI) CanvasCapabilityRefresh(ctx context.Context, params protocol.NodeCanvasCapabilityRefreshParams) error {
+	_, err := api.request(ctx, "node.canvas.capability.refresh", params)
+	return err
+}
+
+// PairingList lists node pairings.
+func (api *NodesAPI) PairingList(ctx context.Context, params protocol.NodePairListParams) ([]NodePairingInfo, error) {
+	raw, err := api.request(ctx, "node.pair.list", params)
 	if err != nil {
 		return nil, err
 	}
@@ -84,21 +123,27 @@ func (p *NodesPairingAPI) List(ctx context.Context, params protocol.NodePairList
 	return result, nil
 }
 
-// Approve approves a node pairing.
-func (p *NodesPairingAPI) Approve(ctx context.Context, params protocol.NodePairApproveParams) error {
-	_, err := p.request(ctx, "node.pairing.approve", params)
+// PairingApprove approves a node pairing.
+func (api *NodesAPI) PairingApprove(ctx context.Context, params protocol.NodePairApproveParams) error {
+	_, err := api.request(ctx, "node.pair.approve", params)
 	return err
 }
 
-// Reject rejects a node pairing.
-func (p *NodesPairingAPI) Reject(ctx context.Context, params protocol.NodePairRejectParams) error {
-	_, err := p.request(ctx, "node.pairing.reject", params)
+// PairingReject rejects a node pairing.
+func (api *NodesAPI) PairingReject(ctx context.Context, params protocol.NodePairRejectParams) error {
+	_, err := api.request(ctx, "node.pair.reject", params)
 	return err
 }
 
-// Verify verifies a node pairing.
-func (p *NodesPairingAPI) Verify(ctx context.Context, params protocol.NodePairVerifyParams) error {
-	_, err := p.request(ctx, "node.pairing.verify", params)
+// PairingVerify verifies a node pairing.
+func (api *NodesAPI) PairingVerify(ctx context.Context, params protocol.NodePairVerifyParams) error {
+	_, err := api.request(ctx, "node.pair.verify", params)
+	return err
+}
+
+// PairingRequest requests a node pairing.
+func (api *NodesAPI) PairingRequest(ctx context.Context, params protocol.NodePairRequestParams) error {
+	_, err := api.request(ctx, "node.pair.request", params)
 	return err
 }
 

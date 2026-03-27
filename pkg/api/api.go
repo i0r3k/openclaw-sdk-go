@@ -48,6 +48,8 @@ type (
 	DevicePairListParams    = protocol.DevicePairListParams
 	DevicePairApproveParams = protocol.DevicePairApproveParams
 	DevicePairRejectParams  = protocol.DevicePairRejectParams
+	DeviceTokenRotateParams = protocol.DeviceTokenRotateParams
+	DeviceTokenRevokeParams = protocol.DeviceTokenRevokeParams
 
 	// Config types
 	ConfigGetParams    = protocol.ConfigGetParams
@@ -81,23 +83,36 @@ type (
 	CronRunsParams   = protocol.CronRunsParams
 
 	// Sessions types
-	SessionsListParams    = protocol.SessionsListParams
-	SessionsPreviewParams = protocol.SessionsPreviewParams
-	SessionsResolveParams = protocol.SessionsResolveParams
-	SessionsPatchParams   = protocol.SessionsPatchParams
-	SessionsResetParams   = protocol.SessionsResetParams
-	SessionsDeleteParams  = protocol.SessionsDeleteParams
-	SessionsCompactParams = protocol.SessionsCompactParams
-	SessionsUsageParams   = protocol.SessionsUsageParams
+	SessionsListParams                = protocol.SessionsListParams
+	SessionsPreviewParams             = protocol.SessionsPreviewParams
+	SessionsPatchParams               = protocol.SessionsPatchParams
+	SessionsResetParams               = protocol.SessionsResetParams
+	SessionsDeleteParams              = protocol.SessionsDeleteParams
+	SessionsCompactParams             = protocol.SessionsCompactParams
+	SessionsUsageParams               = protocol.SessionsUsageParams
+	SessionsCreateParams              = protocol.SessionsCreateParams
+	SessionsSendParams                = protocol.SessionsSendParams
+	SessionsAbortParams               = protocol.SessionsAbortParams
+	SessionsSubscribeParams           = protocol.SessionsSubscribeParams
+	SessionsUnsubscribeParams         = protocol.SessionsUnsubscribeParams
+	SessionsMessagesSubscribeParams   = protocol.SessionsMessagesSubscribeParams
+	SessionsMessagesUnsubscribeParams = protocol.SessionsMessagesUnsubscribeParams
 
 	// Node types
-	NodeListParams           = protocol.NodeListParams
-	NodeInvokeParams         = protocol.NodeInvokeParams
-	NodeEventParams          = protocol.NodeEventParams
-	NodePendingDrainParams   = protocol.NodePendingDrainParams
-	NodePendingDrainResult   = protocol.NodePendingDrainResult
-	NodePendingEnqueueParams = protocol.NodePendingEnqueueParams
-	NodePendingEnqueueResult = protocol.NodePendingEnqueueResult
+	NodeListParams                    = protocol.NodeListParams
+	NodeInvokeParams                  = protocol.NodeInvokeParams
+	NodeEventParams                   = protocol.NodeEventParams
+	NodePendingDrainParams            = protocol.NodePendingDrainParams
+	NodePendingDrainResult            = protocol.NodePendingDrainResult
+	NodePendingEnqueueParams          = protocol.NodePendingEnqueueParams
+	NodePendingEnqueueResult          = protocol.NodePendingEnqueueResult
+	NodeDescribeParams                = protocol.NodeDescribeParams
+	NodeDescribeResult                = protocol.NodeDescribeResult
+	NodePendingPullParams             = protocol.NodePendingPullParams
+	NodePendingPullResult             = protocol.NodePendingPullResult
+	NodePendingAckParams              = protocol.NodePendingAckParams
+	NodeRenameParams                  = protocol.NodeRenameParams
+	NodeCanvasCapabilityRefreshParams = protocol.NodeCanvasCapabilityRefreshParams
 
 	// Chat types
 	ChatInjectParams  = protocol.ChatInjectParams
@@ -105,6 +120,8 @@ type (
 	ChatHistoryParams = protocol.ChatHistoryParams
 	ChatDeleteParams  = protocol.ChatDeleteParams
 	ChatTitleParams   = protocol.ChatTitleParams
+	ChatAbortParams   = protocol.ChatAbortParams
+	ChatSendParams    = protocol.ChatSendParams
 
 	// Common types
 	AgentSummary          = protocol.AgentSummary
@@ -117,4 +134,13 @@ type (
 	DoctorCheckResult     = protocol.DoctorCheckResult
 	SecretsListResult     = protocol.SecretsListResult
 	ChatListResult        = protocol.ChatListResult
+
+	// ExecApprovals types
+	ExecApprovalsGetParams         = protocol.ExecApprovalsGetParams
+	ExecApprovalsSetParams         = protocol.ExecApprovalsSetParams
+	ExecApprovalsNodeGetParams     = protocol.ExecApprovalsNodeGetParams
+	ExecApprovalsNodeSetParams     = protocol.ExecApprovalsNodeSetParams
+	ExecApprovalRequestParams      = protocol.ExecApprovalRequestParams
+	ExecApprovalWaitDecisionParams = protocol.ExecApprovalWaitDecisionParams
+	ExecApprovalResolveParams      = protocol.ExecApprovalResolveParams
 )

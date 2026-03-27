@@ -53,3 +53,16 @@ func (api *ConfigAPI) Schema(ctx context.Context, params protocol.ConfigSchemaPa
 	}
 	return result, nil
 }
+
+// SchemaLookup looks up schema for a specific config key.
+func (api *ConfigAPI) SchemaLookup(ctx context.Context, params protocol.ConfigSchemaLookupParams) (protocol.ConfigSchemaLookupResult, error) {
+	raw, err := api.request(ctx, "config.schema.lookup", params)
+	if err != nil {
+		return protocol.ConfigSchemaLookupResult{}, err
+	}
+	var result protocol.ConfigSchemaLookupResult
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return protocol.ConfigSchemaLookupResult{}, err
+	}
+	return result, nil
+}

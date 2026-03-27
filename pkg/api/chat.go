@@ -68,3 +68,15 @@ func (api *ChatAPI) Title(ctx context.Context, params protocol.ChatTitleParams) 
 	}
 	return result, nil
 }
+
+// Abort aborts a chat.
+func (api *ChatAPI) Abort(ctx context.Context, params protocol.ChatAbortParams) error {
+	_, err := api.request(ctx, "chat.abort", params)
+	return err
+}
+
+// Send sends a message to a chat.
+func (api *ChatAPI) Send(ctx context.Context, params protocol.ChatSendParams) error {
+	_, err := api.request(ctx, "chat.send", params)
+	return err
+}

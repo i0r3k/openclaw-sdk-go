@@ -32,11 +32,6 @@ type SessionsPreviewResult struct {
 	Preview string `json:"preview"`
 }
 
-// SessionsResolveParams parameters for resolving a session.
-type SessionsResolveParams struct {
-	SessionID string `json:"sessionId"`
-}
-
 // SessionsPatchParams parameters for patching a session.
 type SessionsPatchParams struct {
 	SessionID string `json:"sessionId"`
@@ -65,4 +60,47 @@ type SessionsUsageParams struct{}
 // SessionsUsageResult result of session usage.
 type SessionsUsageResult struct {
 	Usage map[string]any `json:"usage"`
+}
+
+// SessionsCreateParams parameters for creating a session.
+type SessionsCreateParams struct {
+	Key     string `json:"key,omitempty"`
+	AgentID string `json:"agentId,omitempty"`
+	Label   string `json:"label,omitempty"`
+}
+
+// SessionsSendParams parameters for sending a message in a session.
+type SessionsSendParams struct {
+	Key            string  `json:"key"`
+	Message        string  `json:"message"`
+	Thinking       *string `json:"thinking,omitempty"`
+	Attachments    []any   `json:"attachments,omitempty"`
+	TimeoutMs      *int64  `json:"timeoutMs,omitempty"`
+	IdempotencyKey *string `json:"idempotencyKey,omitempty"`
+}
+
+// SessionsAbortParams parameters for aborting a session.
+type SessionsAbortParams struct {
+	Key   string  `json:"key"`
+	RunID *string `json:"runId,omitempty"`
+}
+
+// SessionsSubscribeParams parameters for subscribing to a session.
+type SessionsSubscribeParams struct {
+	Key string `json:"key"`
+}
+
+// SessionsUnsubscribeParams parameters for unsubscribing from a session.
+type SessionsUnsubscribeParams struct {
+	Key string `json:"key"`
+}
+
+// SessionsMessagesSubscribeParams parameters for subscribing to session messages.
+type SessionsMessagesSubscribeParams struct {
+	Key string `json:"key"`
+}
+
+// SessionsMessagesUnsubscribeParams parameters for unsubscribing from session messages.
+type SessionsMessagesUnsubscribeParams struct {
+	Key string `json:"key"`
 }

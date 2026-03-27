@@ -60,3 +60,16 @@ func (api *SkillsAPI) Update(ctx context.Context, params protocol.SkillsUpdatePa
 	_, err := api.request(ctx, "skills.update", params)
 	return err
 }
+
+// ToolsEffective returns effective tools.
+func (api *SkillsAPI) ToolsEffective(ctx context.Context) (map[string]any, error) {
+	raw, err := api.request(ctx, "skills.tools.effective", struct{}{})
+	if err != nil {
+		return nil, err
+	}
+	var result map[string]any
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}

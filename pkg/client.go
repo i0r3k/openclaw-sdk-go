@@ -298,6 +298,13 @@ type OpenClawClient interface {
 	Nodes() *api.NodesAPI
 	Skills() *api.SkillsAPI
 	DevicePairing() *api.DevicePairingAPI
+	Browser() *api.BrowserAPI
+	Channels() *api.ChannelsAPI
+	Push() *api.PushAPI
+	ExecApprovals() *api.ExecApprovalsAPI
+	System() *api.SystemAPI
+	Secrets() *api.SecretsAPI
+	Usage() *api.UsageAPI
 	// Server Info
 	GetServerInfo() *connection.HelloOk
 	GetSnapshot() *connection.Snapshot
@@ -333,6 +340,13 @@ type client struct {
 	nodesAPI         *api.NodesAPI
 	skillsAPI        *api.SkillsAPI
 	devicePairingAPI *api.DevicePairingAPI
+	browserAPI       *api.BrowserAPI
+	channelsAPI      *api.ChannelsAPI
+	pushAPI          *api.PushAPI
+	execApprovalsAPI *api.ExecApprovalsAPI
+	systemAPI        *api.SystemAPI
+	secretsAPI       *api.SecretsAPI
+	usageAPI         *api.UsageAPI
 	// Internal state
 	requestFn api.RequestFn
 	ctx       context.Context    // Parent context for cancellation
@@ -382,6 +396,13 @@ func NewClient(opts ...ClientOption) (OpenClawClient, error) {
 	c.nodesAPI = api.NewNodesAPI(c.requestFn)
 	c.skillsAPI = api.NewSkillsAPI(c.requestFn)
 	c.devicePairingAPI = api.NewDevicePairingAPI(c.requestFn)
+	c.browserAPI = api.NewBrowserAPI(c.requestFn)
+	c.channelsAPI = api.NewChannelsAPI(c.requestFn)
+	c.pushAPI = api.NewPushAPI(c.requestFn)
+	c.execApprovalsAPI = api.NewExecApprovalsAPI(c.requestFn)
+	c.systemAPI = api.NewSystemAPI(c.requestFn)
+	c.secretsAPI = api.NewSecretsAPI(c.requestFn)
+	c.usageAPI = api.NewUsageAPI(c.requestFn)
 
 	if cfg.ReconnectEnabled {
 		reconnectConfig := cfg.ReconnectConfig
@@ -609,6 +630,41 @@ func (c *client) Skills() *api.SkillsAPI {
 // DevicePairing returns the DevicePairing API client.
 func (c *client) DevicePairing() *api.DevicePairingAPI {
 	return c.devicePairingAPI
+}
+
+// Browser returns the Browser API client.
+func (c *client) Browser() *api.BrowserAPI {
+	return c.browserAPI
+}
+
+// Channels returns the Channels API client.
+func (c *client) Channels() *api.ChannelsAPI {
+	return c.channelsAPI
+}
+
+// Push returns the Push API client.
+func (c *client) Push() *api.PushAPI {
+	return c.pushAPI
+}
+
+// ExecApprovals returns the ExecApprovals API client.
+func (c *client) ExecApprovals() *api.ExecApprovalsAPI {
+	return c.execApprovalsAPI
+}
+
+// System returns the System API client.
+func (c *client) System() *api.SystemAPI {
+	return c.systemAPI
+}
+
+// Secrets returns the Secrets API client.
+func (c *client) Secrets() *api.SecretsAPI {
+	return c.secretsAPI
+}
+
+// Usage returns the Usage API client.
+func (c *client) Usage() *api.UsageAPI {
+	return c.usageAPI
 }
 
 // GetServerInfo returns the server info from the handshake.

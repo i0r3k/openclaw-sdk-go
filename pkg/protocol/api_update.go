@@ -14,9 +14,14 @@ type PollParams struct{}
 type UpdateRunParams struct{}
 
 // ChatInjectParams parameters for injecting chat.
+// Updated to match TS SessionsSendParams alias (v2.0.0 breaking change).
 type ChatInjectParams struct {
-	ChatID  string `json:"chatId"`
-	Message any    `json:"message"`
+	Key            string  `json:"key"`
+	Message        string  `json:"message"`
+	Thinking       *string `json:"thinking,omitempty"`
+	Attachments    []any   `json:"attachments,omitempty"`
+	TimeoutMs      *int64  `json:"timeoutMs,omitempty"`
+	IdempotencyKey *string `json:"idempotencyKey,omitempty"`
 }
 
 // ============================================================================

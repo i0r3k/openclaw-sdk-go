@@ -18,14 +18,9 @@ func NewAgentsAPI(request RequestFn) *AgentsAPI {
 	return &AgentsAPI{request: request}
 }
 
-// Files provides access to agent file operations.
-type AgentsFilesAPI struct {
-	request RequestFn
-}
-
 // Identity returns agent identity information.
 func (api *AgentsAPI) Identity(ctx context.Context, params protocol.AgentIdentityParams) (protocol.AgentIdentityResult, error) {
-	raw, err := api.request(ctx, "agents.identity", params)
+	raw, err := api.request(ctx, "agent.identity", params)
 	if err != nil {
 		return protocol.AgentIdentityResult{}, err
 	}
@@ -38,7 +33,7 @@ func (api *AgentsAPI) Identity(ctx context.Context, params protocol.AgentIdentit
 
 // Wait waits for an agent to complete.
 func (api *AgentsAPI) Wait(ctx context.Context, params protocol.AgentWaitParams) error {
-	_, err := api.request(ctx, "agents.wait", params)
+	_, err := api.request(ctx, "agent.wait", params)
 	return err
 }
 
@@ -94,14 +89,8 @@ func (api *AgentsAPI) List(ctx context.Context) (protocol.AgentsListResult, erro
 	return result, nil
 }
 
-// Files returns a new AgentsFilesAPI for file operations.
-func (api *AgentsAPI) Files() *AgentsFilesAPI {
-	return &AgentsFilesAPI{request: api.request}
-}
-
-// List lists agent files.
-func (f *AgentsFilesAPI) List(ctx context.Context, params protocol.AgentsFilesListParams) (protocol.AgentsFilesListResult, error) {
-	raw, err := f.request(ctx, "agents.files.list", params)
+func (api *AgentsAPI) FilesList(ctx context.Context, params protocol.AgentsFilesListParams) (protocol.AgentsFilesListResult, error) {
+	raw, err := api.request(ctx, "agents.files.list", params)
 	if err != nil {
 		return protocol.AgentsFilesListResult{}, err
 	}
@@ -112,9 +101,9 @@ func (f *AgentsFilesAPI) List(ctx context.Context, params protocol.AgentsFilesLi
 	return result, nil
 }
 
-// Get gets an agent file.
-func (f *AgentsFilesAPI) Get(ctx context.Context, params protocol.AgentsFilesGetParams) (protocol.AgentsFilesGetResult, error) {
-	raw, err := f.request(ctx, "agents.files.get", params)
+// FilesGet gets an agent file.
+func (api *AgentsAPI) FilesGet(ctx context.Context, params protocol.AgentsFilesGetParams) (protocol.AgentsFilesGetResult, error) {
+	raw, err := api.request(ctx, "agents.files.get", params)
 	if err != nil {
 		return protocol.AgentsFilesGetResult{}, err
 	}
@@ -125,9 +114,9 @@ func (f *AgentsFilesAPI) Get(ctx context.Context, params protocol.AgentsFilesGet
 	return result, nil
 }
 
-// Set sets an agent file.
-func (f *AgentsFilesAPI) Set(ctx context.Context, params protocol.AgentsFilesSetParams) (protocol.AgentsFilesSetResult, error) {
-	raw, err := f.request(ctx, "agents.files.set", params)
+// FilesSet sets an agent file.
+func (api *AgentsAPI) FilesSet(ctx context.Context, params protocol.AgentsFilesSetParams) (protocol.AgentsFilesSetResult, error) {
+	raw, err := api.request(ctx, "agents.files.set", params)
 	if err != nil {
 		return protocol.AgentsFilesSetResult{}, err
 	}
