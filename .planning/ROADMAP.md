@@ -26,7 +26,12 @@ OpenClaw SDK Go is a production-grade WebSocket client library migrated from Typ
   4. Pending request map has a hard limit -- when limit is reached, SendRequest returns ErrTooManyPendingRequests immediately
   5. When InsecureSkipVerify is enabled, a warning is logged at connection time
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-foundation-01-PLAN.md -- Define shared type contracts (RequestRateLimiter interface, TokenBucketLimiter, MaxRetries field, sentinel errors)
+- [ ] 01-foundation-02-PLAN.md -- Implement rate limiting and pending request limits in the request path
+- [ ] 01-foundation-03-PLAN.md -- Implement retry budget (MaxRetries enforcement) and TLS hardening (InsecureSkipVerify warning + CRL stub docs)
 
 ### Phase 2: Observability
 
@@ -83,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation Hardening | 0/5 | Not started | - |
+| 1. Foundation Hardening | 0/3 | Planned | - |
 | 2. Observability | 0/4 | Not started | - |
 | 3. Client Struct Refactor | 0/2 | Not started | - |
 | 4. Benchmarking and Fuzz Testing | 0/3 | Not started | - |
