@@ -24,14 +24,14 @@ OpenClaw SDK Go is a production-grade WebSocket client library migrated from Typ
   2. Reconnect attempts are bounded -- after MaxRetries=10, reconnect stops and returns ErrMaxRetriesExceeded
   3. TLS CRL validation either works or is explicitly marked as stub with documentation explaining limitation
   4. Pending request map has a hard limit -- when limit is reached, SendRequest returns ErrTooManyPendingRequests immediately
-  5. When InsecureSkipVerify is enabled, a warning is logged at connection time
+  5. When InsecureSkipVerify is enabled, a warning is logged at connection time through Logger (not stderr)
 
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-foundation-01-PLAN.md -- Define shared type contracts (RequestRateLimiter interface, TokenBucketLimiter, MaxRetries field, sentinel errors)
-- [ ] 01-foundation-02-PLAN.md -- Implement rate limiting and pending request limits in the request path
-- [ ] 01-foundation-03-PLAN.md -- Implement retry budget (MaxRetries enforcement) and TLS hardening (InsecureSkipVerify warning + CRL stub docs)
+- [ ] 01-foundation-01-PLAN.md -- Define shared type contracts (RequestRateLimiter interface, TokenBucketLimiter, MaxRetries field with precedence docs, typed errors integrating existing hierarchy)
+- [ ] 01-foundation-02-PLAN.md -- Fix channel ownership, reduce client mutex scope, implement rate limiting and configurable pending request limits
+- [ ] 01-foundation-03-PLAN.md -- Fix reconnect triggering, enforce MaxRetries budget, wire TLS/Logger through actual connection path (connection.go, websocket.go), CRL stub docs
 
 ### Phase 2: Observability
 
