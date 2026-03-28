@@ -6,7 +6,7 @@ OpenClaw SDK Go is a production-grade WebSocket client library migrated from Typ
 
 ## Phases
 
-- [ ] **Phase 1: Foundation Hardening** - Production-safe core with rate limiting, retry budgets, TLS CRL, pending request limits, and InsecureSkipVerify warning
+- [x] **Phase 1: Foundation Hardening** - Production-safe core with rate limiting, retry budgets, TLS CRL, pending request limits, and InsecureSkipVerify warning (completed 2026-03-28)
 - [ ] **Phase 2: Observability** - Connection health metrics, per-request timeouts, event priority levels, configurable event buffer
 - [ ] **Phase 3: Client Struct Refactor** - Group oversized client struct into logical sub-structs; clarify Close vs Disconnect
 - [ ] **Phase 4: Benchmarking and Fuzz Testing** - Hot-path benchmarks, fuzz test depth with corpus, benchstat CI integration
@@ -88,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation Hardening | 0/3 | Planned | - |
+| 1. Foundation Hardening | 0/3 | Complete    | 2026-03-28 |
 | 2. Observability | 0/4 | Not started | - |
 | 3. Client Struct Refactor | 0/2 | Not started | - |
 | 4. Benchmarking and Fuzz Testing | 0/3 | Not started | - |

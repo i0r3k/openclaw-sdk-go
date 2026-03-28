@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 01-foundation-03-PLAN.md
-last_updated: "2026-03-28T05:44:18.039Z"
+status: verifying
+stopped_at: Completed 01-foundation-02-PLAN.md
+last_updated: "2026-03-28T14:51:43.316Z"
 last_activity: 2026-03-28
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 0
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 ## Current Position
 
-Phase: 1 (Foundation Hardening) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 2
+Plan: Not started
+Status: Phase complete — ready for verification
 Last activity: 2026-03-28
 
 Progress: [░░░░░░░░░░] 0%
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 01-foundation P01 | 385 | 2 tasks | 5 files |
 | Phase 01-foundation P03 | 15 min | 2 tasks | 10 files |
+| Phase 01-foundation P02 | 703 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,11 @@ From research (2026-03-28):
 - Phase 5 last: Versioning and distribution tooling is the final step before v1.0 release
 - [Phase 01-foundation]: Option A (simple Allow() bool) chosen for RequestRateLimiter over Option B (retry-after feedback)
 - [Phase 01-foundation]: Backwards-compatible MaxRetries/MaxAttempts overlap: MaxRetries > 0 wins, zero falls back to MaxAttempts, both zero = infinite
+- [Phase 01-foundation]: maxPending=0 means unlimited (backward compatible default for RequestManager)
+- [Phase 01-foundation]: Rate limit check outside client mutex, before connection check (returns RATE_LIMITED immediately)
+- [Phase 01-foundation]: Clear()/Close() send nil on respCh instead of closing channels; cleanup() in SendRequest closes
+- [Phase 01-foundation]: ClientConfig.MaxPending=0 falls back to 256 in NewClient wiring
+- [Phase 01-foundation]: RATE_LIMITED error is retryable=true (transient load condition)
 
 ### Pending Todos
 
@@ -78,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T05:44:18.037Z
-Stopped at: Completed 01-foundation-03-PLAN.md
+Last session: 2026-03-28T14:37:51.233Z
+Stopped at: Completed 01-foundation-02-PLAN.md
 Resume file: None
