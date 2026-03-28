@@ -122,6 +122,12 @@ var (
 	FromContext                = types.FromContext
 )
 
+// Re-export rate limiter types from pkg/types (FOUND-01, FOUND-04)
+type RequestRateLimiter = types.RequestRateLimiter
+type TokenBucketLimiter = types.TokenBucketLimiter
+
+var NewTokenBucketLimiter = types.NewTokenBucketLimiter
+
 // ClientConfig holds client configuration for creating an OpenClaw client.
 // It contains all the settings needed to connect to a WebSocket server.
 type ClientConfig struct {
@@ -147,6 +153,8 @@ type ClientConfig struct {
 	ReconnectEnabled    bool                            // Enable automatic reconnection
 	ReconnectConfig     *ReconnectConfig                // Reconnection configuration
 	AuthHandler         auth.AuthHandler                // Authentication handler (deprecated: use CredentialsProvider)
+	RateLimiter         RequestRateLimiter              // Optional rate limiter for request throughput (FOUND-01)
+	MaxPending          int                             // Max concurrent pending requests; 0 = use default 256 (FOUND-04)
 }
 
 // TickMonitorConfig configures the tick/heartbeat monitor.
@@ -289,6 +297,31 @@ func WithGapDetector(config *GapDetectorConfig) ClientOption {
 	}
 }
 
+// WithRateLimit sets the rate limiter for request throughput (FOUND-01).
+// When configured, SendRequest checks limiter.Allow() before sending.
+// If Allow() returns false, SendRequest returns a RATE_LIMITED error immediately
+// without making a transport call.
+func WithRateLimit(limiter RequestRateLimiter) ClientOption {
+	return func(c *ClientConfig) error {
+		c.RateLimiter = limiter
+		return nil
+	}
+}
+
+// WithMaxPending sets the maximum number of concurrent pending requests (FOUND-04).
+// When set to 0 (default), uses a sensible default of 256.
+// When the pending request map is full, SendRequest returns a TooManyPendingRequestsError.
+// This prevents unbounded memory growth from in-flight requests.
+func WithMaxPending(max int) ClientOption {
+	return func(c *ClientConfig) error {
+		if max < 0 {
+			return fmt.Errorf("max pending must be >= 0, got %d", max)
+		}
+		c.MaxPending = max
+		return nil
+	}
+}
+
 // OpenClawClient is the main client interface for the OpenClaw SDK.
 // It provides methods for connecting, sending requests, and managing events.
 type OpenClawClient interface {
@@ -393,6 +426,12 @@ func NewClient(opts ...ClientOption) (OpenClawClient, error) {
 	// Initialize managers
 	c.managers.event = managers.NewEventManager(ctx, cfg.EventBufferSize, cfg.EventEmitTimeout)
 	c.managers.request = managers.NewRequestManager(ctx)
+	// Wire pending request limit (FOUND-04)
+	maxPending := cfg.MaxPending
+	if maxPending == 0 {
+		maxPending = 256 // sensible default
+	}
+	c.managers.request.SetMaxPending(maxPending)
 	c.managers.connection = managers.NewConnectionManager(ctx, &managers.ClientConfig{
 		URL:       cfg.URL,
 		Header:    cfg.Header,
@@ -569,42 +608,55 @@ func (c *client) State() ConnectionState {
 
 // SendRequest sends a request and waits for a response.
 // Thread-safe method that serializes the request and sends it via the transport.
+// The client mutex is held only briefly to snapshot state; it is released before
+// waiting for a response, allowing concurrent SendRequests (FOUND-01).
 func (c *client) SendRequest(ctx context.Context, req *protocol.RequestFrame) (*protocol.ResponseFrame, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.managers.connection == nil || c.managers.connection.Transport() == nil {
-		return nil, NewConnectionError("NOT_CONNECTED", "not connected", false, nil)
+	// Rate limit check OUTSIDE client mutex (FOUND-01).
+	// Rate limiting is a pre-flight check independent of connection state.
+	if c.config.RateLimiter != nil && !c.config.RateLimiter.Allow() {
+		return nil, NewRequestError("RATE_LIMITED", "rate limit exceeded", true, nil)
 	}
 
+	// Snapshot needed state under client mutex, then release.
+	// This allows concurrent SendRequests while one is waiting for a response.
+	c.mu.Lock()
+	if c.managers.connection == nil || c.managers.connection.Transport() == nil {
+		c.mu.Unlock()
+		return nil, NewConnectionError("NOT_CONNECTED", "not connected", false, nil)
+	}
+	transport := c.managers.connection.Transport()
+	policyMgr := c.policyManager
+	c.mu.Unlock()
+
 	// Validate payload size against server policy
-	if c.policyManager != nil && c.policyManager.HasPolicy() {
+	var sendFunc func(*protocol.RequestFrame) error
+	if policyMgr != nil && policyMgr.HasPolicy() {
 		data, err := json.Marshal(req)
 		if err != nil {
 			return nil, NewProtocolError(string(types.ProtocolErrFrameTooLarge), "failed to marshal request", false, nil)
 		}
-		maxPayload := c.policyManager.GetMaxPayload()
+		maxPayload := policyMgr.GetMaxPayload()
 		if int64(len(data)) > maxPayload {
 			return nil, NewProtocolError(
 				string(types.ProtocolErrFrameTooLarge),
 				fmt.Sprintf("request payload size %d exceeds server limit %d", len(data), maxPayload),
-				false,
-				nil,
+				false, nil,
 			)
 		}
-		sendFunc := func(r *protocol.RequestFrame) error {
-			return c.managers.connection.Transport().Send(data)
+		// Capture data in closure for transport.Send
+		sendFunc = func(r *protocol.RequestFrame) error {
+			return transport.Send(data)
 		}
-		return c.managers.request.SendRequest(ctx, req, sendFunc)
+	} else {
+		data, err := json.Marshal(req)
+		if err != nil {
+			return nil, NewProtocolError(string(types.ProtocolErrFrameTooLarge), "failed to marshal request", false, nil)
+		}
+		sendFunc = func(r *protocol.RequestFrame) error {
+			return transport.Send(data)
+		}
 	}
 
-	data, err := json.Marshal(req)
-	if err != nil {
-		return nil, NewProtocolError(string(types.ProtocolErrFrameTooLarge), "failed to marshal request", false, nil)
-	}
-	sendFunc := func(r *protocol.RequestFrame) error {
-		return c.managers.connection.Transport().Send(data)
-	}
 	return c.managers.request.SendRequest(ctx, req, sendFunc)
 }
 
