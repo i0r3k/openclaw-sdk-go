@@ -47,7 +47,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-observability-01-PLAN.md -- OBS-01: ConnectionMetrics struct, GetTickIntervalMs/GetStaleMultiplier helpers, ReconnectManager.AttemptCount(), client.GetMetrics()
+- [x] 02-observability-01-PLAN.md -- OBS-01: ConnectionMetrics struct, GetTickIntervalMs/GetStaleMultiplier helpers, ReconnectManager.AttemptCount(), client.GetMetrics()
 - [ ] 02-observability-02-PLAN.md -- OBS-02: SendRequest variadic opts + WithRequestTimeout; OBS-03: Event priority levels with priority-based dispatcher and drop logic
 - [ ] 02-observability-03-PLAN.md -- OBS-04: Verify EventBufferSize configurable via WithEventBufferSize (already implemented)
 

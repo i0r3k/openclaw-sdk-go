@@ -15,7 +15,7 @@
 
 ### Observability (P2 — v1.x)
 
-- [ ] **OBS-01**: Connection health metrics — `ConnectionMetrics` struct with Latency, LastTickAge, ReconnectCount; expose via `GetMetrics()` method
+- [x] **OBS-01**: Connection health metrics — `ConnectionMetrics` struct with Latency, LastTickAge, ReconnectCount; expose via `GetMetrics()` method
 - [ ] **OBS-02**: Per-request timeout — Allow different timeout per request via `SendRequest(ctx, req, opts...)` with timeout option
 - [ ] **OBS-03**: Graceful degradation — Event priority levels; when EventChannel is full, drop low-priority events first
 - [ ] **OBS-04**: Event buffer configuration — Configurable `EventBufferSize` via client option
@@ -81,7 +81,7 @@
 | FOUND-03 | Phase 1 | Complete |
 | FOUND-04 | Phase 1 | Complete |
 | FOUND-05 | Phase 1 | Complete |
-| OBS-01 | Phase 2 | Pending |
+| OBS-01 | Phase 2 | Complete |
 | OBS-02 | Phase 2 | Pending |
 | OBS-03 | Phase 2 | Pending |
 | OBS-04 | Phase 2 | Pending |
