@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-observability-01-PLAN.md
-last_updated: "2026-03-28T16:11:07.606Z"
+stopped_at: Completed 02-observability-02-PLAN.md
+last_updated: "2026-03-28T17:30:00.000Z"
 last_activity: 2026-03-28
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 3
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 5
 - Average duration: N/A
 - Total execution time: 0.0 hours
 
@@ -48,7 +48,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Recent Trend:**
 
-- Last 5 plans: No completed plans yet
+- Last 5 plans: 02-observability-02, 02-observability-01, 01-foundation-02, 01-foundation-03, 01-foundation-01
 - Trend: N/A
 
 *Updated after each plan completion*
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation P03 | 15 min | 2 tasks | 10 files |
 | Phase 01-foundation P02 | 703 | 2 tasks | 5 files |
 | Phase 02-observability P01 | 15 | 4 tasks | 8 files |
+| Phase 02-observability P02 | - | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ From research (2026-03-28):
 - [Phase 01-foundation]: Clear()/Close() send nil on respCh instead of closing channels; cleanup() in SendRequest closes
 - [Phase 01-foundation]: ClientConfig.MaxPending=0 falls back to 256 in NewClient wiring
 - [Phase 01-foundation]: RATE_LIMITED error is retryable=true (transient load condition)
+- [Phase 02-observability]: WithRequestTimeout overwrites existing ctx deadline (explicit caller choice)
+- [Phase 02-observability]: Event priority: HIGH=Error/Disconnect/StateChange/Gap, MEDIUM=Tick/Response/Connect, LOW=Message/Request
+- [Phase 02-observability]: Priority channels: HIGH=25%, MEDIUM=25%, LOW=50% buffer partition
 
 ### Pending Todos
 
@@ -85,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T16:11:07.603Z
-Stopped at: Completed 02-observability-01-PLAN.md
+Last session: 2026-03-28T17:30:00.000Z
+Stopped at: Completed 02-observability-02-PLAN.md
 Resume file: None
