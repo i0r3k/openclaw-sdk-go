@@ -7,10 +7,10 @@
 
 ### Foundation (P1 — must fix before production use)
 
-- [ ] **FOUND-01**: Client-side rate limiting — Add `RequestRateLimiter` interface with `WithRateLimit()` option to prevent server rejection under load
-- [ ] **FOUND-02**: Retry budget — Add `MaxRetries` field to `ReconnectConfig`; replace unlimited (MaxRetries=0) with sensible default of 10
+- [x] **FOUND-01**: Client-side rate limiting — Add `RequestRateLimiter` interface with `WithRateLimit()` option to prevent server rejection under load
+- [x] **FOUND-02**: Retry budget — Add `MaxRetries` field to `ReconnectConfig`; replace unlimited (MaxRetries=0) with sensible default of 10
 - [ ] **FOUND-03**: TLS CRL validation — Implement actual `CheckCertificateRevocation` or mark stub with explicit comment explaining limitation
-- [ ] **FOUND-04**: Unbounded pending requests limit — Add max pending requests limit with `ErrTooManyPendingRequests` error
+- [x] **FOUND-04**: Unbounded pending requests limit — Add max pending requests limit with `ErrTooManyPendingRequests` error
 - [ ] **FOUND-05**: InsecureSkipVerify warning — Add warning log when TLS InsecureSkipVerify is enabled
 
 ### Observability (P2 — v1.x)
@@ -76,10 +76,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
-| FOUND-02 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 | Complete |
+| FOUND-02 | Phase 1 | Complete |
 | FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
+| FOUND-04 | Phase 1 | Complete |
 | FOUND-05 | Phase 1 | Pending |
 | OBS-01 | Phase 2 | Pending |
 | OBS-02 | Phase 2 | Pending |
