@@ -48,7 +48,7 @@ Plans:
 
 Plans:
 - [x] 02-observability-01-PLAN.md -- OBS-01: ConnectionMetrics struct, GetTickIntervalMs/GetStaleMultiplier helpers, ReconnectManager.AttemptCount(), client.GetMetrics()
-- [ ] 02-observability-02-PLAN.md -- OBS-02: SendRequest variadic opts + WithRequestTimeout; OBS-03: Event priority levels with priority-based dispatcher and drop logic
+- [x] 02-observability-02-PLAN.md -- OBS-02: SendRequest variadic opts + WithRequestTimeout; OBS-03: Event priority levels with priority-based dispatcher and drop logic
 - [ ] 02-observability-03-PLAN.md -- OBS-04: Verify EventBufferSize configurable via WithEventBufferSize (already implemented)
 
 ### Phase 3: Client Struct Refactor
@@ -94,7 +94,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation Hardening | 3/3 | Complete    | 2026-03-28 |
-| 2. Observability | 0/3 | Not started | - |
+| 2. Observability | 2/3 | In progress | - |
 | 3. Client Struct Refactor | 0/2 | Not started | - |
 | 4. Benchmarking and Fuzz Testing | 0/3 | Not started | - |
 | 5. Release Infrastructure | 0/3 | Not started | - |
