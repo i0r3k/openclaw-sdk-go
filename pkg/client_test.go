@@ -4,6 +4,7 @@ package openclaw
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -409,4 +410,63 @@ func TestClientClose_MultipleTimes(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error on second close: %v", err)
 	}
+}
+
+func TestGetMetrics_UnconnectedClient(t *testing.T) {
+	client, err := NewClient()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer func() {
+		_ = client.Close()
+	}()
+
+	metrics := client.GetMetrics()
+	if metrics.Latency != 0 {
+		t.Errorf("expected Latency=0 for unconnected client, got %v", metrics.Latency)
+	}
+	if metrics.LastTickAge != 0 {
+		t.Errorf("expected LastTickAge=0 for unconnected client, got %v", metrics.LastTickAge)
+	}
+	if metrics.ReconnectCount != 0 {
+		t.Errorf("expected ReconnectCount=0 for unconnected client, got %d", metrics.ReconnectCount)
+	}
+	if metrics.IsStale {
+		t.Error("expected IsStale=false for unconnected client")
+	}
+}
+
+func TestGetMetrics_ReturnsConnectionMetrics(t *testing.T) {
+	client, err := NewClient()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer func() {
+		_ = client.Close()
+	}()
+
+	metrics := client.GetMetrics()
+	// Verify it's a ConnectionMetrics struct (type alias works)
+	var _ ConnectionMetrics = metrics
+}
+
+func TestGetMetrics_ThreadSafe(t *testing.T) {
+	client, err := NewClient()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer func() {
+		_ = client.Close()
+	}()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_ = client.GetMetrics()
+		}()
+	}
+	wg.Wait()
+	// Should not race with -race
 }

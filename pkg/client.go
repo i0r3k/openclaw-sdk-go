@@ -51,6 +51,7 @@ type EventType = types.EventType
 type Event = types.Event
 type EventHandler = types.EventHandler
 type ReconnectConfig = types.ReconnectConfig
+type ConnectionMetrics = types.ConnectionMetrics
 
 // Re-export state constants
 const (
@@ -340,6 +341,12 @@ type OpenClawClient interface {
 	Subscribe(eventType EventType, handler EventHandler) func()
 	// Close shuts down the client and releases all resources.
 	Close() error
+	// GetMetrics returns a snapshot of connection health metrics (OBS-01).
+	// Latency is a tick-based estimate (tickInterval * staleMultiplier).
+	// LastTickAge is time since last tick received.
+	// ReconnectCount is lifetime total reconnection attempts.
+	// IsStale indicates whether connection heartbeat is overdue.
+	GetMetrics() ConnectionMetrics
 	// API Accessors
 	Chat() *api.ChatAPI
 	Agents() *api.AgentsAPI
@@ -773,6 +780,49 @@ func (c *client) GetTickMonitor() *events.TickMonitor {
 // GetGapDetector returns the gap detector instance.
 func (c *client) GetGapDetector() *events.GapDetector {
 	return c.gapDetector
+}
+
+// GetMetrics returns a snapshot of connection health metrics (OBS-01).
+// Thread-safe: snapshots data under client mutex.
+func (c *client) GetMetrics() ConnectionMetrics {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var latency time.Duration
+	var lastTickAge time.Duration
+	var isStale bool
+
+	if c.tickMonitor != nil {
+		// Latency = tickInterval * staleMultiplier (baseline estimate)
+		intervalMs := c.tickMonitor.GetTickIntervalMs()
+		multiplier := c.tickMonitor.GetStaleMultiplier()
+		latency = time.Duration(intervalMs*int64(multiplier)) * time.Millisecond
+
+		// LastTickAge = actual time since last tick
+		lastTickAgeMs := c.tickMonitor.GetTimeSinceLastTick()
+		lastTickAge = time.Duration(lastTickAgeMs) * time.Millisecond
+
+		// IsStale from monitor
+		isStale = c.tickMonitor.IsStale()
+
+		// If stale, use LastTickAge as the latency estimate (overdue heartbeat)
+		if isStale && lastTickAge > latency {
+			latency = lastTickAge
+		}
+	}
+	// If no tickMonitor (not configured or not connected), latency stays 0
+
+	reconnectCount := 0
+	if c.managers.reconnect != nil {
+		reconnectCount = int(c.managers.reconnect.AttemptCount())
+	}
+
+	return ConnectionMetrics{
+		Latency:        latency,
+		LastTickAge:    lastTickAge,
+		ReconnectCount: reconnectCount,
+		IsStale:        isStale,
+	}
 }
 
 // newRequestFn creates a request function for API namespaces.
