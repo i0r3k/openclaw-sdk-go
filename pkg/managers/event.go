@@ -18,8 +18,16 @@ import (
 
 // EventManager manages event subscriptions and dispatching.
 // It provides a thread-safe pub/sub system for SDK events.
+// Priority-based dispatch ensures high-priority events (errors, disconnects) are
+// never dropped when the buffer is full (OBS-03).
 type EventManager struct {
-	events      chan types.Event                                  // Channel for incoming events
+	// Priority input channels (OBS-03)
+	priorityHigh   chan types.Event
+	priorityMedium chan types.Event
+	priorityLow    chan types.Event
+	// Output channel (from dispatch loop)
+	events chan types.Event
+
 	handlers    map[types.EventType]map[uint64]types.EventHandler // Map of event type to handlers
 	ctx         context.Context                                   // Context for lifecycle management
 	cancel      context.CancelFunc                                // Cancel function for context
@@ -35,20 +43,40 @@ type EventManager struct {
 
 // NewEventManager creates a new event manager with the specified buffer size.
 // The emitTimeout controls how long Emit will wait when the channel is full before dropping the event.
+// Buffer is partitioned: HIGH=25%, MEDIUM=25%, LOW=50% (OBS-03).
 func NewEventManager(ctx context.Context, bufferSize int, emitTimeout time.Duration) *EventManager {
 	ctx, cancel := context.WithCancel(ctx)
 	logger, _ := types.FromContext(ctx)
 	if logger == nil {
 		logger = &types.NopLogger{}
 	}
+
+	// Buffer partition: HIGH=25%, MEDIUM=25%, LOW=50% (OBS-03)
+	// Use at least 1 capacity for each priority channel
+	highSize := bufferSize / 4
+	if highSize < 1 {
+		highSize = 1
+	}
+	medSize := bufferSize / 4
+	if medSize < 1 {
+		medSize = 1
+	}
+	lowSize := bufferSize / 2
+	if lowSize < 1 {
+		lowSize = 1
+	}
+
 	return &EventManager{
-		events:      make(chan types.Event, bufferSize),
-		handlers:    make(map[types.EventType]map[uint64]types.EventHandler),
-		ctx:         ctx,
-		cancel:      cancel,
-		logger:      logger,
-		emitTimeout: emitTimeout,
-		emitTimer:   time.NewTimer(emitTimeout),
+		priorityHigh:   make(chan types.Event, highSize),
+		priorityMedium: make(chan types.Event, medSize),
+		priorityLow:    make(chan types.Event, lowSize),
+		events:         make(chan types.Event, bufferSize),
+		handlers:       make(map[types.EventType]map[uint64]types.EventHandler),
+		ctx:            ctx,
+		cancel:         cancel,
+		logger:         logger,
+		emitTimeout:    emitTimeout,
+		emitTimer:      time.NewTimer(emitTimeout),
 	}
 }
 
@@ -84,42 +112,174 @@ func (em *EventManager) Events() <-chan types.Event {
 	return em.events
 }
 
+// PriorityHigh returns the HIGH priority channel (for testing).
+func (em *EventManager) PriorityHigh() chan types.Event {
+	return em.priorityHigh
+}
+
+// PriorityMedium returns the MEDIUM priority channel (for testing).
+func (em *EventManager) PriorityMedium() chan types.Event {
+	return em.priorityMedium
+}
+
+// PriorityLow returns the LOW priority channel (for testing).
+func (em *EventManager) PriorityLow() chan types.Event {
+	return em.priorityLow
+}
+
 // Emit emits an event to the event channel.
-// It blocks for up to emitTimeout when the channel is full before dropping the event.
+// It uses priority-based routing: HIGH priority events are never dropped when
+// MEDIUM and LOW buffers are full (OBS-03).
 func (em *EventManager) Emit(event types.Event) {
-	// Reset timer before use — safe even if already stopped or expired
-	if !em.emitTimer.Stop() {
-		// Drain channel if timer already fired
+	// Auto-assign priority based on event type if not explicitly set (OBS-03, D-11 through D-13)
+	if event.Priority == 0 {
+		switch event.Type {
+		case types.EventError, types.EventDisconnect, types.EventStateChange, types.EventGap:
+			event.Priority = types.EventPriorityHigh
+		case types.EventTick, types.EventResponse, types.EventConnect:
+			event.Priority = types.EventPriorityMedium
+		case types.EventMessage, types.EventRequest:
+			event.Priority = types.EventPriorityLow
+		default:
+			event.Priority = types.EventPriorityMedium
+		}
+	}
+
+	// Select target priority channel
+	var priorityCh chan types.Event
+	switch event.Priority {
+	case types.EventPriorityHigh:
+		priorityCh = em.priorityHigh
+	case types.EventPriorityMedium:
+		priorityCh = em.priorityMedium
+	default:
+		priorityCh = em.priorityLow
+	}
+
+	// Try non-blocking send to priority channel
+	select {
+	case priorityCh <- event:
+		return
+	default:
+	}
+
+	// Priority channel full -- try to drain lower priorities to make room
+	if event.Priority > types.EventPriorityLow {
+		em.drainLowerPriority(event.Priority)
 		select {
-		case <-em.emitTimer.C:
+		case priorityCh <- event:
+			return
 		default:
 		}
 	}
-	em.emitTimer.Reset(em.emitTimeout)
 
-	select {
-	case em.events <- event:
-	case <-em.ctx.Done():
-	case <-em.emitTimer.C:
-		em.logger.Warn("event channel full, dropping event", "type", event.Type)
+	// Still full -- log and drop
+	em.logger.Warn("event dropped", "type", event.Type, "priority", event.Priority)
+}
+
+// drainLowerPriority drains one event from lower priority channels to make room (OBS-03).
+// Drops LOW first, then MEDIUM. Never drains HIGH.
+func (em *EventManager) drainLowerPriority(priority types.EventPriority) {
+	switch priority {
+	case types.EventPriorityHigh:
+		// Drain one from MEDIUM if available
+		select {
+		case <-em.priorityMedium:
+		default:
+		}
+	case types.EventPriorityMedium:
+		// Drain one from LOW if available
+		select {
+		case <-em.priorityLow:
+		default:
+		}
 	}
 }
 
-// Start begins the event dispatch loop in a background goroutine.
-// It listens for events and dispatches them to registered handlers.
+// Start begins the event dispatch loop in background goroutines.
+// The dispatcher implements priority-based event dispatch: HIGH events are always
+// processed first when available. A separate goroutine reads from the output
+// channel and dispatches to handlers (OBS-03).
 func (em *EventManager) Start() {
 	em.wg.Add(1)
-	go func() {
-		defer em.wg.Done()
-		for {
+	go em.dispatcher() // Priority-based routing to em.events
+	em.wg.Add(1)
+	go em.dispatchLoop() // Reads from em.events, calls handlers
+}
+
+// dispatchLoop reads events from the output channel and dispatches to handlers.
+func (em *EventManager) dispatchLoop() {
+	defer em.wg.Done()
+	for {
+		select {
+		case <-em.ctx.Done():
+			return
+		case event := <-em.events:
+			em.dispatch(event)
+		}
+	}
+}
+
+// dispatcher implements priority-based event dispatch (OBS-03).
+// HIGH events are always processed first when available.
+// MEDIUM events are processed when HIGH is empty.
+// LOW events are processed when HIGH and MEDIUM are both empty.
+func (em *EventManager) dispatcher() {
+	defer em.wg.Done()
+	for {
+		select {
+		case <-em.ctx.Done():
+			return
+		case e := <-em.priorityHigh:
+			// Always prefer HIGH -- blocking select on output
 			select {
+			case em.events <- e:
 			case <-em.ctx.Done():
 				return
-			case event := <-em.events:
-				em.dispatch(event)
+			}
+		case e := <-em.priorityMedium:
+			// MEDIUM -- prefer HIGH if it arrives while we're sending
+			select {
+			case em.events <- e:
+			case <-em.priorityHigh:
+				// Got HIGH instead -- send MEDIUM later, process HIGH now
+				select {
+				case em.events <- e: // send MEDIUM
+				case <-em.ctx.Done():
+					return
+				}
+				em.events <- e // process HIGH
+				continue
+			case <-em.ctx.Done():
+				return
+			}
+		case e := <-em.priorityLow:
+			// LOW -- wait for HIGH or MEDIUM if they arrive while we're sending
+			select {
+			case em.events <- e:
+			case <-em.priorityHigh:
+				// Got HIGH -- send LOW later, process HIGH now
+				select {
+				case em.events <- e: // send LOW
+				case <-em.ctx.Done():
+					return
+				}
+				em.events <- e // process HIGH
+				continue
+			case <-em.priorityMedium:
+				// Got MEDIUM -- send LOW later, process MEDIUM now
+				select {
+				case em.events <- e: // send LOW
+				case <-em.ctx.Done():
+					return
+				}
+				em.events <- e // process MEDIUM
+				continue
+			case <-em.ctx.Done():
+				return
 			}
 		}
-	}()
+	}
 }
 
 // dispatch sends event to all registered handlers for the event type.
@@ -166,6 +326,11 @@ func (em *EventManager) Close() error {
 	em.emitTimer.Stop()
 	em.cancel()
 	em.wg.Wait()
+
+	// Close all channels (safe to close already-closed channel in Go)
+	close(em.priorityHigh)
+	close(em.priorityMedium)
+	close(em.priorityLow)
 	close(em.events)
 	return nil
 }

@@ -309,24 +309,29 @@ func TestEventManager_EventsAfterClose(t *testing.T) {
 
 func TestEventManager_Emit_BackpressureTimeout(t *testing.T) {
 	ctx := context.Background()
-	em := NewEventManager(ctx, 1, 50*time.Millisecond)
-	// Do NOT start the event manager - events will accumulate in the channel
-	// This allows us to test backpressure without dispatcher consuming events
+	// With priority channels, backpressure behavior is different:
+	// - When priority channel is full, we drain from lower priorities first
+	// - If still full, we drop immediately (non-blocking)
+	// This test verifies the new non-blocking drop behavior.
+	em := NewEventManager(ctx, 4, 50*time.Millisecond)
+	// Do NOT start the event manager - events will accumulate in channels
 
-	// Fill the channel
+	// With bufferSize=4: highSize=1, medSize=1, lowSize=2
+	// EventConnect goes to priorityMedium (auto-assigned MEDIUM)
+
+	// Fill the MEDIUM channel
 	em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()})
 
-	// Time how long the blocked emit takes
+	// Second emit should drain from LOW first, but since EventConnect=MEDIUM,
+	// it can't drain from LOW (only HIGH drains from MEDIUM)
+	// So it should drop immediately
 	start := time.Now()
-	em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()}) // Should wait ~50ms then drop
+	em.Emit(types.Event{Type: types.EventConnect, Timestamp: time.Now()})
 	elapsed := time.Since(start)
 
-	// Should have waited approximately the timeout duration before returning
-	if elapsed < 40*time.Millisecond {
-		t.Errorf("expected emit to wait at least 40ms, got %v", elapsed)
-	}
-	if elapsed > 100*time.Millisecond {
-		t.Errorf("expected emit to wait at most 100ms, got %v", elapsed)
+	// With priority-based non-blocking design, emit returns immediately
+	if elapsed > 10*time.Millisecond {
+		t.Errorf("expected immediate return (non-blocking), got %v", elapsed)
 	}
 
 	_ = em.Close()

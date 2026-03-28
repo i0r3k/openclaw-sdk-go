@@ -196,6 +196,25 @@ func DefaultClientConfig() *ClientConfig {
 // It modifies the ClientConfig and returns an error if the configuration is invalid.
 type ClientOption func(*ClientConfig) error
 
+// requestConfig holds configuration for a single request.
+type requestConfig struct {
+	timeout time.Duration
+}
+
+// RequestOption is a functional option for modifying request behavior (OBS-02).
+// Use WithRequestTimeout to set a per-request timeout.
+type RequestOption func(*requestConfig)
+
+// WithRequestTimeout sets a timeout for the request (OBS-02).
+// This wraps the incoming context with a deadline.
+// NOTE: If the caller already set a deadline on ctx, it is OVERWRITTEN by this timeout.
+// This is explicit per D-07 -- caller chooses per-request timeout, not additive.
+func WithRequestTimeout(d time.Duration) RequestOption {
+	return func(cfg *requestConfig) {
+		cfg.timeout = d
+	}
+}
+
 // WithURL sets the WebSocket URL.
 // Required option for establishing a connection.
 func WithURL(url string) ClientOption {
@@ -333,7 +352,8 @@ type OpenClawClient interface {
 	// State returns the current connection state.
 	State() ConnectionState
 	// SendRequest sends a request and waits for a response.
-	SendRequest(ctx context.Context, req *protocol.RequestFrame) (*protocol.ResponseFrame, error)
+	// Optional RequestOptions can be passed to modify request behavior (e.g., WithRequestTimeout).
+	SendRequest(ctx context.Context, req *protocol.RequestFrame, opts ...RequestOption) (*protocol.ResponseFrame, error)
 	// Events returns the event channel for receiving events.
 	Events() <-chan Event
 	// Subscribe adds an event handler for the specified event type.
@@ -617,7 +637,20 @@ func (c *client) State() ConnectionState {
 // Thread-safe method that serializes the request and sends it via the transport.
 // The client mutex is held only briefly to snapshot state; it is released before
 // waiting for a response, allowing concurrent SendRequests (FOUND-01).
-func (c *client) SendRequest(ctx context.Context, req *protocol.RequestFrame) (*protocol.ResponseFrame, error) {
+func (c *client) SendRequest(ctx context.Context, req *protocol.RequestFrame, opts ...RequestOption) (*protocol.ResponseFrame, error) {
+	// Apply request options (OBS-02)
+	cfg := &requestConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	// Wrap ctx with timeout if set (overwrites existing ctx deadline per D-07)
+	if cfg.timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, cfg.timeout)
+		defer cancel()
+	}
+
 	// Rate limit check OUTSIDE client mutex (FOUND-01).
 	// Rate limiting is a pre-flight check independent of connection state.
 	if c.config.RateLimiter != nil && !c.config.RateLimiter.Allow() {

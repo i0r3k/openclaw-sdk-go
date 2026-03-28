@@ -48,6 +48,7 @@ const (
 // Event represents a generic event in the system.
 // Events are emitted by various components and delivered to subscribers.
 type Event struct {
+	Priority  EventPriority // Event priority for drop behavior (default: EventPriorityMedium when zero)
 	Type      EventType
 	Payload   any
 	Err       error
