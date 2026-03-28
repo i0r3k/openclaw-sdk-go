@@ -29,9 +29,9 @@ OpenClaw SDK Go is a production-grade WebSocket client library migrated from Typ
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-foundation-01-PLAN.md -- Define shared type contracts (RequestRateLimiter interface, TokenBucketLimiter, MaxRetries field with precedence docs, typed errors integrating existing hierarchy)
-- [ ] 01-foundation-02-PLAN.md -- Fix channel ownership, reduce client mutex scope, implement rate limiting and configurable pending request limits
-- [ ] 01-foundation-03-PLAN.md -- Fix reconnect triggering, enforce MaxRetries budget, wire TLS/Logger through actual connection path (connection.go, websocket.go), CRL stub docs
+- [x] 01-foundation-01-PLAN.md -- Define shared type contracts (RequestRateLimiter interface, TokenBucketLimiter, MaxRetries field with precedence docs, typed errors integrating existing hierarchy)
+- [x] 01-foundation-02-PLAN.md -- Fix channel ownership, reduce client mutex scope, implement rate limiting and configurable pending request limits
+- [x] 01-foundation-03-PLAN.md -- Fix reconnect triggering, enforce MaxRetries budget, wire TLS/Logger through actual connection path (connection.go, websocket.go), CRL stub docs
 
 ### Phase 2: Observability
 
@@ -44,7 +44,12 @@ Plans:
   3. Events have priority levels -- when EventChannel is full, low-priority events are dropped before high-priority
   4. User can configure event buffer size -- EventBufferSize is settable via client option
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-observability-01-PLAN.md -- OBS-01: ConnectionMetrics struct, GetTickIntervalMs/GetStaleMultiplier helpers, ReconnectManager.AttemptCount(), client.GetMetrics()
+- [ ] 02-observability-02-PLAN.md -- OBS-02: SendRequest variadic opts + WithRequestTimeout; OBS-03: Event priority levels with priority-based dispatcher and drop logic
+- [ ] 02-observability-03-PLAN.md -- OBS-04: Verify EventBufferSize configurable via WithEventBufferSize (already implemented)
 
 ### Phase 3: Client Struct Refactor
 
@@ -88,8 +93,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation Hardening | 0/3 | Complete    | 2026-03-28 |
-| 2. Observability | 0/4 | Not started | - |
+| 1. Foundation Hardening | 3/3 | Complete    | 2026-03-28 |
+| 2. Observability | 0/3 | Not started | - |
 | 3. Client Struct Refactor | 0/2 | Not started | - |
 | 4. Benchmarking and Fuzz Testing | 0/3 | Not started | - |
 | 5. Release Infrastructure | 0/3 | Not started | - |
