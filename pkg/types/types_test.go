@@ -49,6 +49,9 @@ func TestDefaultReconnectConfig(t *testing.T) {
 	if cfg.MaxAttempts != 0 {
 		t.Errorf("expected MaxAttempts=0 (infinite), got %d", cfg.MaxAttempts)
 	}
+	if cfg.MaxRetries != 10 {
+		t.Errorf("expected MaxRetries=10, got %d", cfg.MaxRetries)
+	}
 	if cfg.InitialDelay != 1*time.Second {
 		t.Errorf("expected InitialDelay=1s, got %v", cfg.InitialDelay)
 	}
