@@ -1,0 +1,1 @@
+{"type":"req","id":"seed-003","method":"chat.send","params":{"room":"general","message":"hello"}}
