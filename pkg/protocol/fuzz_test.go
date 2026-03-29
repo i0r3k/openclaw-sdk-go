@@ -2,6 +2,8 @@
 package protocol
 
 import (
+	"bytes"
+	"encoding/json"
 	"testing"
 )
 
@@ -15,20 +17,42 @@ func FuzzValidateRequestFrame(f *testing.F) {
 	f.Add([]byte(`{"id":"` + string(make([]byte, 10000)) + `"}`))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Validate that parsing doesn't panic
-		var frame RequestFrame
-		_ = frame
-
 		// Try to parse as JSON (may fail, that's OK)
-		// The goal is to ensure no panics occur
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("panic on input: %v", r)
 			}
 		}()
 
-		// Validate the frame if possible
-		_ = data
+		var original RequestFrame
+		if err := json.Unmarshal(data, &original); err != nil {
+			// Invalid JSON is expected for some fuzz inputs
+			return
+		}
+
+		// Round-trip assertion (D-05): Marshal -> Unmarshal -> compare fields
+		marshaled, err := json.Marshal(original)
+		if err != nil {
+			t.Errorf("RequestFrame marshal failed: %v", err)
+			return
+		}
+
+		var roundTripped RequestFrame
+		if err := json.Unmarshal(marshaled, &roundTripped); err != nil {
+			t.Errorf("RequestFrame round-trip unmarshal failed: %v", err)
+			return
+		}
+
+		// Compare key fields that survive round-trip
+		if roundTripped.ID != original.ID {
+			t.Errorf("RequestFrame round-trip mismatch: ID=%q want=%q", roundTripped.ID, original.ID)
+		}
+		if roundTripped.Method != original.Method {
+			t.Errorf("RequestFrame round-trip mismatch: Method=%q want=%q", roundTripped.Method, original.Method)
+		}
+		if !bytes.Equal(roundTripped.Params, original.Params) {
+			t.Errorf("RequestFrame round-trip mismatch: Params differ")
+		}
 	})
 }
 
@@ -41,16 +65,48 @@ func FuzzValidateResponseFrame(f *testing.F) {
 	f.Add([]byte(``))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		var frame ResponseFrame
-		_ = frame
-
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("panic on input: %v", r)
 			}
 		}()
 
-		_ = data
+		var original ResponseFrame
+		if err := json.Unmarshal(data, &original); err != nil {
+			return
+		}
+
+		// Round-trip assertion (D-05)
+		marshaled, err := json.Marshal(original)
+		if err != nil {
+			t.Errorf("ResponseFrame marshal failed: %v", err)
+			return
+		}
+
+		var roundTripped ResponseFrame
+		if err := json.Unmarshal(marshaled, &roundTripped); err != nil {
+			t.Errorf("ResponseFrame round-trip unmarshal failed: %v", err)
+			return
+		}
+
+		// Compare key fields
+		if roundTripped.ID != original.ID {
+			t.Errorf("ResponseFrame round-trip mismatch: ID=%q want=%q", roundTripped.ID, original.ID)
+		}
+		if roundTripped.Ok != original.Ok {
+			t.Errorf("ResponseFrame round-trip mismatch: Ok=%v want=%v", roundTripped.Ok, original.Ok)
+		}
+		if !bytes.Equal(roundTripped.Payload, original.Payload) {
+			t.Errorf("ResponseFrame round-trip mismatch: Payload differ")
+		}
+		if (roundTripped.Error == nil) != (original.Error == nil) {
+			t.Errorf("ResponseFrame round-trip mismatch: Error presence mismatch")
+		}
+		if roundTripped.Error != nil && original.Error != nil {
+			if roundTripped.Error.Code != original.Error.Code {
+				t.Errorf("ResponseFrame round-trip mismatch: Error.Code=%q want=%q", roundTripped.Error.Code, original.Error.Code)
+			}
+		}
 	})
 }
 
@@ -62,16 +118,40 @@ func FuzzValidateEventFrame(f *testing.F) {
 	f.Add([]byte(`{invalid`))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		var frame EventFrame
-		_ = frame
-
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("panic on input: %v", r)
 			}
 		}()
 
-		_ = data
+		var original EventFrame
+		if err := json.Unmarshal(data, &original); err != nil {
+			return
+		}
+
+		// Round-trip assertion (D-05)
+		marshaled, err := json.Marshal(original)
+		if err != nil {
+			t.Errorf("EventFrame marshal failed: %v", err)
+			return
+		}
+
+		var roundTripped EventFrame
+		if err := json.Unmarshal(marshaled, &roundTripped); err != nil {
+			t.Errorf("EventFrame round-trip unmarshal failed: %v", err)
+			return
+		}
+
+		// Compare key fields
+		if roundTripped.Event != original.Event {
+			t.Errorf("EventFrame round-trip mismatch: Event=%q want=%q", roundTripped.Event, original.Event)
+		}
+		if !bytes.Equal(roundTripped.Payload, original.Payload) {
+			t.Errorf("EventFrame round-trip mismatch: Payload differ")
+		}
+		if roundTripped.Seq != original.Seq {
+			t.Errorf("EventFrame round-trip mismatch: Seq=%v want=%v", roundTripped.Seq, original.Seq)
+		}
 	})
 }
 
@@ -99,6 +179,13 @@ func FuzzFrameType(f *testing.F) {
 
 		// Test String method (if any)
 		_ = string(ft)
+
+		// Round-trip: FrameType -> String -> FrameType -> IsValid
+		ftStr := string(ft)
+		ftRoundTrip := FrameType(ftStr)
+		if ftRoundTrip.IsValid() != ft.IsValid() {
+			t.Errorf("FrameType round-trip mismatch: IsValid=%v want=%v", ftRoundTrip.IsValid(), ft.IsValid())
+		}
 	})
 }
 
@@ -121,8 +208,25 @@ func FuzzRequestID(f *testing.F) {
 
 		// Create request frame with fuzzed ID
 		frame := NewRequestFrame(string(id), "test", nil)
-		if frame != nil {
-			_ = frame.ID
+		if frame == nil {
+			return
+		}
+
+		// Round-trip assertion
+		marshaled, err := json.Marshal(frame)
+		if err != nil {
+			t.Errorf("RequestFrame marshal failed: %v", err)
+			return
+		}
+
+		var roundTripped RequestFrame
+		if err := json.Unmarshal(marshaled, &roundTripped); err != nil {
+			t.Errorf("RequestFrame round-trip unmarshal failed: %v", err)
+			return
+		}
+
+		if roundTripped.ID != frame.ID {
+			t.Errorf("RequestFrame round-trip mismatch: ID=%q want=%q", roundTripped.ID, frame.ID)
 		}
 	})
 }
@@ -145,8 +249,25 @@ func FuzzMethod(f *testing.F) {
 
 		// Create request frame with fuzzed method
 		frame := NewRequestFrame("test-id", string(method), nil)
-		if frame != nil {
-			_ = frame.Method
+		if frame == nil {
+			return
+		}
+
+		// Round-trip assertion
+		marshaled, err := json.Marshal(frame)
+		if err != nil {
+			t.Errorf("RequestFrame marshal failed: %v", err)
+			return
+		}
+
+		var roundTripped RequestFrame
+		if err := json.Unmarshal(marshaled, &roundTripped); err != nil {
+			t.Errorf("RequestFrame round-trip unmarshal failed: %v", err)
+			return
+		}
+
+		if roundTripped.Method != frame.Method {
+			t.Errorf("RequestFrame round-trip mismatch: Method=%q want=%q", roundTripped.Method, frame.Method)
 		}
 	})
 }
@@ -168,8 +289,25 @@ func FuzzEventType(f *testing.F) {
 
 		// Create event frame with fuzzed type
 		frame := NewEventFrame(string(eventType), nil)
-		if frame != nil {
-			_ = frame.Event
+		if frame == nil {
+			return
+		}
+
+		// Round-trip assertion
+		marshaled, err := json.Marshal(frame)
+		if err != nil {
+			t.Errorf("EventFrame marshal failed: %v", err)
+			return
+		}
+
+		var roundTripped EventFrame
+		if err := json.Unmarshal(marshaled, &roundTripped); err != nil {
+			t.Errorf("EventFrame round-trip unmarshal failed: %v", err)
+			return
+		}
+
+		if roundTripped.Event != frame.Event {
+			t.Errorf("EventFrame round-trip mismatch: Event=%q want=%q", roundTripped.Event, frame.Event)
 		}
 	})
 }
@@ -201,17 +339,20 @@ func FuzzJSONMalformed(f *testing.F) {
 			}
 		}()
 
-		// Attempt to unmarshal into various frame types
+		// Attempt to unmarshal into RequestFrame and round-trip
 		var reqFrame RequestFrame
-		_ = reqFrame
-
-		var respFrame ResponseFrame
-		_ = respFrame
-
-		var eventFrame EventFrame
-		_ = eventFrame
-
-		_ = data
+		if err := json.Unmarshal(data, &reqFrame); err == nil {
+			// Valid JSON - test round-trip
+			marshaled, err := json.Marshal(reqFrame)
+			if err == nil {
+				var roundTripped RequestFrame
+				if err := json.Unmarshal(marshaled, &roundTripped); err == nil {
+					if roundTripped.ID != reqFrame.ID {
+						t.Errorf("RequestFrame round-trip mismatch: ID=%q want=%q", roundTripped.ID, reqFrame.ID)
+					}
+				}
+			}
+		}
 	})
 }
 
@@ -233,10 +374,18 @@ func FuzzLargeInput(f *testing.F) {
 			}
 		}()
 
-		// Test that large inputs don't cause crashes
-		if len(data) > 0 {
-			frame := NewRequestFrame(string(data), "test", nil)
-			_ = frame
+		// Test with RequestFrame and round-trip
+		var reqFrame RequestFrame
+		if err := json.Unmarshal(data, &reqFrame); err == nil {
+			marshaled, err := json.Marshal(reqFrame)
+			if err == nil {
+				var roundTripped RequestFrame
+				if err := json.Unmarshal(marshaled, &roundTripped); err == nil {
+					if roundTripped.ID != reqFrame.ID {
+						t.Errorf("RequestFrame round-trip mismatch: ID=%q want=%q", roundTripped.ID, reqFrame.ID)
+					}
+				}
+			}
 		}
 	})
 }
@@ -265,8 +414,26 @@ func FuzzSpecialCharacters(f *testing.F) {
 			}
 		}()
 
-		// Test with special characters in various fields
+		// Test with special characters in RequestFrame and round-trip
 		frame := NewRequestFrame(string(data), string(data), nil)
-		_ = frame
+		if frame == nil {
+			return
+		}
+
+		marshaled, err := json.Marshal(frame)
+		if err != nil {
+			t.Errorf("RequestFrame marshal failed: %v", err)
+			return
+		}
+
+		var roundTripped RequestFrame
+		if err := json.Unmarshal(marshaled, &roundTripped); err != nil {
+			t.Errorf("RequestFrame round-trip unmarshal failed: %v", err)
+			return
+		}
+
+		if roundTripped.ID != frame.ID {
+			t.Errorf("RequestFrame round-trip mismatch: ID=%q want=%q", roundTripped.ID, frame.ID)
+		}
 	})
 }
