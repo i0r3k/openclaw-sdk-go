@@ -29,7 +29,7 @@
 
 - [ ] **TEST-01**: Hot-path benchmarks — Add `*_bench_test.go` files for transport write/read, event dispatch, request correlation using `b.Loop()` (Go 1.24+)
 - [ ] **TEST-02**: Fuzz test depth — Add round-trip correctness assertions to existing fuzz tests; add corpus files in `testdata/fuzz/`
-- [ ] **TEST-03**: Benchmark CI integration — Add `benchstat` to CI for regression detection on hot paths
+- [x] **TEST-03**: Benchmark CI integration — Add `benchstat` to CI for regression detection on hot paths
 
 ### Release Infrastructure (P2 — v1.x)
 
@@ -89,7 +89,7 @@
 | API-02 | Phase 3 | Complete |
 | TEST-01 | Phase 4 | Pending |
 | TEST-02 | Phase 4 | Pending |
-| TEST-03 | Phase 4 | Pending |
+| TEST-03 | Phase 4 | Complete |
 | REL-01 | Phase 5 | Pending |
 | REL-02 | Phase 5 | Pending |
 | REL-03 | Phase 5 | Pending |

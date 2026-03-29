@@ -104,5 +104,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Foundation Hardening | 3/3 | Complete    | 2026-03-28 |
 | 2. Observability | 2/3 | In progress | - |
 | 3. Client Struct Refactor | 2/2 | Complete   | 2026-03-29 |
-| 4. Benchmarking and Fuzz Testing | 0/2 | Not started | - |
+| 4. Benchmarking and Fuzz Testing | 1/2 | In progress | - |
 | 5. Release Infrastructure | 0/3 | Not started | - |
