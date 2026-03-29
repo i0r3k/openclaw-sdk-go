@@ -7,10 +7,10 @@ OpenClaw SDK Go is a production-grade WebSocket client library migrated from Typ
 ## Phases
 
 - [x] **Phase 1: Foundation Hardening** - Production-safe core with rate limiting, retry budgets, TLS CRL, pending request limits, and InsecureSkipVerify warning (completed 2026-03-28)
-- [ ] **Phase 2: Observability** - Connection health metrics, per-request timeouts, event priority levels, configurable event buffer
+- [x] **Phase 2: Observability** - Connection health metrics, per-request timeouts, event priority levels, configurable event buffer (completed 2026-03-29)
 - [x] **Phase 3: Client Struct Refactor** - Group oversized client struct into logical sub-structs; clarify Close vs Disconnect (completed 2026-03-29)
-- [ ] **Phase 4: Benchmarking and Fuzz Testing** - Hot-path benchmarks, fuzz test depth with corpus, benchstat CI integration
-- [ ] **Phase 5: Release Infrastructure** - GoReleaser library mode, semantic versioning tags, changelog automation
+- [x] **Phase 4: Benchmarking and Fuzz Testing** - Hot-path benchmarks, fuzz test depth with corpus, benchstat CI integration (completed 2026-03-29)
+- [x] **Phase 5: Release Infrastructure** - GoReleaser library mode, semantic versioning tags, changelog automation (completed 2026-03-29)
 
 ## Phase Details
 
@@ -49,7 +49,7 @@ Plans:
 Plans:
 - [x] 02-observability-01-PLAN.md -- OBS-01: ConnectionMetrics struct, GetTickIntervalMs/GetStaleMultiplier helpers, ReconnectManager.AttemptCount(), client.GetMetrics()
 - [x] 02-observability-02-PLAN.md -- OBS-02: SendRequest variadic opts + WithRequestTimeout; OBS-03: Event priority levels with priority-based dispatcher and drop logic
-- [ ] 02-observability-03-PLAN.md -- OBS-04: Verify EventBufferSize configurable via WithEventBufferSize (already implemented)
+- [x] 02-observability-03-PLAN.md -- OBS-04: Verify EventBufferSize configurable via WithEventBufferSize (already implemented)
 
 ### Phase 3: Client Struct Refactor
 
@@ -96,7 +96,7 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md -- REL-01: Update .goreleaser.yaml with mode: github, release section, and cleaned up before.hooks
-- [ ] 05-02-PLAN.md -- REL-02: Create and push v1.0.1 tag to trigger release workflow
+- [x] 05-02-PLAN.md -- REL-02: Create and push v1.0.1 tag to trigger release workflow (skipped: v1.0.0 tag present)
 - [x] 05-03-PLAN.md -- REL-03: Verify git-cliff configuration and release.yml integration
 
 ## Progress
@@ -107,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation Hardening | 3/3 | Complete    | 2026-03-28 |
-| 2. Observability | 2/3 | In progress | - |
+| 2. Observability | 3/3 | Complete    | 2026-03-29 |
 | 3. Client Struct Refactor | 2/2 | Complete   | 2026-03-29 |
-| 4. Benchmarking and Fuzz Testing | 1/2 | In progress | - |
-| 5. Release Infrastructure | 2/3 | In Progress|  |
+| 4. Benchmarking and Fuzz Testing | 2/2 | Complete   | 2026-03-29 |
+| 5. Release Infrastructure | 3/3 | Complete    | 2026-03-29 |
