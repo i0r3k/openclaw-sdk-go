@@ -95,9 +95,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- REL-01: Update .goreleaser.yaml with mode: github, release section, and cleaned up before.hooks
+- [x] 05-01-PLAN.md -- REL-01: Update .goreleaser.yaml with mode: github, release section, and cleaned up before.hooks
 - [ ] 05-02-PLAN.md -- REL-02: Create and push v1.0.1 tag to trigger release workflow
-- [ ] 05-03-PLAN.md -- REL-03: Verify git-cliff configuration and release.yml integration
+- [x] 05-03-PLAN.md -- REL-03: Verify git-cliff configuration and release.yml integration
 
 ## Progress
 
@@ -110,4 +110,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Observability | 2/3 | In progress | - |
 | 3. Client Struct Refactor | 2/2 | Complete   | 2026-03-29 |
 | 4. Benchmarking and Fuzz Testing | 1/2 | In progress | - |
-| 5. Release Infrastructure | 0/3 | Not started | - |
+| 5. Release Infrastructure | 2/3 | In Progress|  |
